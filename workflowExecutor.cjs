@@ -1,5 +1,5 @@
-import { Node, Flow, AsyncNode, AsyncFlow, AsyncBatchNode, AsyncParallelBatchNode, AgentNode, EmbeddingNode, SemanticMemoryNode, MemoryNode, TransformNode, CodeInterpreterNode, UserInputNode, InteractiveInputNode, IteratorNode, SubFlowNode, SchedulerNode } from '@fractal-solutions/qflow';
-import { ReadFileNode, WriteFileNode, ShellCommandNode, HttpRequestNode, DeepSeekLLMNode, AgentDeepSeekLLMNode, OpenAILLMNode, AgentOpenAILLMNode, GeminiLLMNode, OllamaLLMNode, AgentOllamaLLMNode, HuggingFaceLLMNode, AgentHuggingFaceLLMNode, OpenRouterLLMNode, AgentOpenRouterLLMNode, DuckDuckGoSearchNode, GoogleSearchNode, WebScraperNode, BrowserControlNode, WebSocketsNode, WebHookNode, AppendFileNode, ListDirectoryNode, DataExtractorNode, PDFProcessorNode, SpreadsheetNode, DataValidationNode, GitNode, GitHubNode, GISNode, DisplayImageNode, ImageGalleryNode, HardwareInteractionNode, SpeechSynthesisNode, MultimediaProcessingNode, RemoteExecutionNode, SystemNotificationNode, StripeNode, HackerNewsNode } from '@fractal-solutions/qflow/nodes';
+import { Node, Flow, AsyncNode, AsyncFlow, AsyncBatchNode, AsyncParallelBatchNode } from '@fractal-solutions/qflow';
+import { AgentNode, EmbeddingNode, SemanticMemoryNode, MemoryNode, TransformNode, CodeInterpreterNode, UserInputNode, InteractiveInputNode, IteratorNode, SubFlowNode, SchedulerNode, ReadFileNode, WriteFileNode, ShellCommandNode, HttpRequestNode, DeepSeekLLMNode, AgentDeepSeekLLMNode, OpenAILLMNode, AgentOpenAILLMNode, GeminiLLMNode, OllamaLLMNode, AgentOllamaLLMNode, HuggingFaceLLMNode, AgentHuggingFaceLLMNode, OpenRouterLLMNode, AgentOpenRouterLLMNode, DuckDuckGoSearchNode, GoogleSearchNode, ScrapeURLNode, BrowserControlNode, WebHookNode, AppendFileNode, ListDirectoryNode, DataExtractorNode, PDFProcessorNode, SpreadsheetNode, DataValidationNode, GISNode, DisplayImageNode, ImageGalleryNode, HardwareInteractionNode, SpeechSynthesisNode, MultimediaProcessingNode, RemoteExecutionNode, SystemNotificationNode } from '@fractal-solutions/qflow/nodes';
 
 const nodeMap = {
   Node,
@@ -36,9 +36,8 @@ const nodeMap = {
   AgentOpenRouterLLMNode,
   DuckDuckGoSearchNode,
   GoogleSearchNode,
-  WebScraperNode,
+  ScrapeURLNode,
   BrowserControlNode,
-  WebSocketsNode,
   WebHookNode,
   AppendFileNode,
   ListDirectoryNode,
@@ -46,8 +45,6 @@ const nodeMap = {
   PDFProcessorNode,
   SpreadsheetNode,
   DataValidationNode,
-  GitNode,
-  GitHubNode,
   GISNode,
   DisplayImageNode,
   ImageGalleryNode,
@@ -56,14 +53,12 @@ const nodeMap = {
   MultimediaProcessingNode,
   RemoteExecutionNode,
   SystemNotificationNode,
-  StripeNode,
-  HackerNewsNode,
 };
 
 export const executeWorkflow = async (nodes, edges) => {
   if (!nodes || nodes.length === 0) {
     console.error('No nodes to execute.');
-    return;
+    return { success: false, error: 'No nodes to execute.' };
   }
 
   const flowNodes = {};
@@ -93,7 +88,7 @@ export const executeWorkflow = async (nodes, edges) => {
   const startNodeId = nodes.find(node => !edges.some(edge => edge.target === node.id))?.id;
   if (!startNodeId) {
     console.error('Could not find a start node.');
-    return;
+    return { success: false, error: 'Could not find a start node.' };
   }
 
   const startNode = flowNodes[startNodeId];
@@ -103,9 +98,33 @@ export const executeWorkflow = async (nodes, edges) => {
     console.log('Running workflow...');
     const result = await flow.runAsync({});
     console.log('Workflow finished:', result);
-    alert('Workflow finished successfully!');
+    return { success: true, result };
   } catch (error) {
     console.error('Workflow failed:', error);
-    alert('Workflow failed. Check the console for details.');
+    return { success: false, error: error.message };
+  }
+};
+
+export const executeSingleNode = async (nodeData) => {
+  const NodeClass = nodeMap[nodeData.type];
+  if (!NodeClass) {
+    const errorMessage = `Node type ${nodeData.type} not found in nodeMap.`;
+    console.error(errorMessage);
+    return { success: false, error: errorMessage };
+  }
+
+  try {
+    const flowNode = new NodeClass();
+    flowNode.setParams(nodeData.data);
+
+    // Wrap the single node in an AsyncFlow to ensure consistent execution
+    const singleNodeFlow = new AsyncFlow(flowNode);
+    console.log(`Executing single node: ${nodeData.type}...`);
+    const result = await singleNodeFlow.runAsync({});
+    console.log(`Single node ${nodeData.type} finished:`, result);
+    return { success: true, result };
+  } catch (error) {
+    console.error(`Single node ${nodeData.type} execution failed:`, error);
+    return { success: false, error: error.message };
   }
 };

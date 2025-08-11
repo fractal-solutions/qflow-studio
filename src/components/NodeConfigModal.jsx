@@ -67,11 +67,14 @@ const nodeIcons = {
 const NodeConfigModal = ({ node, onConfigChange, onClose, onDeleteNode }) => {
   const [nodeData, setNodeData] = useState(node.data);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [isExecuting, setIsExecuting] = useState(false);
+  const [executionResult, setExecutionResult] = useState(null);
   const schema = nodeConfigSchemas[node.type];
   const NodeIcon = nodeIcons[node.type] || Cpu; // Default to Cpu icon if not found
 
   useEffect(() => {
     setNodeData(node.data);
+    setExecutionResult(null); // Clear previous results when node changes
   }, [node.data]);
 
   const handleChange = (e) => {
@@ -101,6 +104,27 @@ const NodeConfigModal = ({ node, onConfigChange, onClose, onDeleteNode }) => {
     setShowConfirmDialog(false);
   };
 
+  const handleExecuteNode = async () => {
+    setIsExecuting(true);
+    setExecutionResult(null); // Clear previous results
+
+    try {
+      const response = await fetch('http://localhost:3000/execute-node', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ nodeData: { type: node.type, data: nodeData } }),
+      });
+      const result = await response.json();
+      setExecutionResult(result);
+    } catch (error) {
+      setExecutionResult({ success: false, error: error.message });
+    } finally {
+      setIsExecuting(false);
+    }
+  };
+
   if (!node) return null;
 
   return (
@@ -108,8 +132,8 @@ const NodeConfigModal = ({ node, onConfigChange, onClose, onDeleteNode }) => {
       <div className="bg-[var(--color-surface)] p-8 rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto text-[var(--color-text)] border border-[var(--color-border)] transform transition-all duration-300 scale-100 opacity-100">
         {/* Modal Header */}
         <div className="flex items-start justify-between mb-6 pb-4 border-b border-[var(--color-border)]">
-          <div className="flex flex-col space-y-1">
-            <div className="flex flex-col space-y-0">
+          <div className="flex flex-col space-y-[-2]">
+            <div className="flex items-left flex-col">
               <button
                 onClick={handleSave}
                 className="p-2 rounded-md text-[var(--color-primary)] hover:bg-[var(--color-primary)]/10 hover:text-[var(--color-primaryHover)] transition-colors flex items-center space-x-1 group"
@@ -127,18 +151,19 @@ const NodeConfigModal = ({ node, onConfigChange, onClose, onDeleteNode }) => {
                 <span className="text-xs font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-200">Delete</span>
               </button>
               <button
-                onClick={() => alert('Execute Node functionality to be implemented!')} // Placeholder for execute
-                className="p-2 rounded-md text-[var(--color-secondary)] hover:bg-[var(--color-secondary)]/10 hover:text-[var(--color-secondary)] transition-colors flex items-center space-x-1 group"
+                onClick={handleExecuteNode}
+                className={`p-2 rounded-md text-[var(--color-secondary)] hover:bg-[var(--color-secondary)]/10 hover:text-[var(--color-secondary)] transition-colors flex items-center space-x-1 group ${isExecuting ? 'opacity-50 cursor-not-allowed' : ''}`}
                 aria-label="Execute Node"
+                disabled={isExecuting}
               >
-                <Play className="w-4 h-4" /> {/* Using Play icon for execute */}
-                <span className="text-xs font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-200">Execute</span>
+                {isExecuting ? <span className="animate-spin">⚙️</span> : <Play className="w-4 h-4" />}
+                <span className="text-xs font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-200">{isExecuting ? 'Executing...' : 'Execute'}</span>
               </button>
             </div>
           </div>
           <div className="flex flex-col items-center flex-grow -mt-2"> {/* Adjust margin-top to align with buttons */}
             <NodeIcon className="w-8 h-8 text-[var(--color-primary)] mb-2" /> {/* Larger icon */}
-            <h2 className="text-xl font-bold text-[var(--color-text)] text-center">{node.type}</h2>
+            <h2 className="text-lg font-bold text-[var(--color-text)] text-center">{node.type}</h2>
           </div>
           <button
             onClick={onClose}
@@ -234,6 +259,16 @@ const NodeConfigModal = ({ node, onConfigChange, onClose, onDeleteNode }) => {
             <p className="text-[var(--color-textSecondary)]">No configurable parameters for this node type.</p>
           )}
         </div>
+
+        {/* Execution Result Display */}
+        {executionResult && (
+          <div className="mt-6 pt-4 border-t border-[var(--color-border)]">
+            <h3 className="text-lg font-bold mb-2 text-[var(--color-text)]">Execution Result:</h3>
+            <pre className={`p-3 rounded-md text-sm overflow-x-auto ${executionResult.success ? 'bg-[var(--color-success)]/10 text-[var(--color-success)]' : 'bg-[var(--color-error)]/10 text-[var(--color-error)]'}`}>
+              <code>{JSON.stringify(executionResult.result || executionResult.error, null, 2)}</code>
+            </pre>
+          </div>
+        )}
       </div>
 
       <ConfirmationDialog
@@ -247,3 +282,4 @@ const NodeConfigModal = ({ node, onConfigChange, onClose, onDeleteNode }) => {
 };
 
 export default NodeConfigModal;
+
