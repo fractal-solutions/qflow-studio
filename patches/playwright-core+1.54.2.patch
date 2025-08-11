@@ -1,0 +1,9 @@
+diff --git a/node_modules/playwright-core/index.js b/node_modules/playwright-core/index.js
+index d4991d0..1035a6a 100644
+--- a/node_modules/playwright-core/index.js
++++ b/node_modules/playwright-core/index.js
+@@ -30,3 +30,4 @@ if (major < minimumMajorNodeVersion) {
+ }
+ 
+ module.exports = require('./lib/inprocess');
++module.exports.default = require('./lib/inprocess');
