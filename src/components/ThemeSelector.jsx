@@ -40,30 +40,18 @@ const ThemeSelector = () => {
           <span className="text-sm font-medium text-[var(--color-text)]">Theme</span>
         </div>
         
-        <div className="grid grid-cols-2 gap-2">
-          {Object.entries(themes).map(([key, theme]) => (
-            <button
-              key={key}
-              onClick={() => changeTheme(key)}
-              className={`p-3 rounded-lg border transition-all ${
-                currentTheme === key
-                  ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/10'
-                  : 'border-[var(--color-border)] bg-[var(--color-surface)] hover:bg-[var(--color-surfaceHover)]'
-              }`}
-            >
-              <div className="flex items-center space-x-3">
-                <div
-                  className="w-4 h-4 rounded-full"
-                  style={{ backgroundColor: theme.colors.primary }}
-                />
-                <span className="text-sm font-medium text-[var(--color-text)]">
-                  {theme.name}
-                </span>
-              </div>
-            </button>
-          ))}
+        <select
+            value={currentTheme}
+            onChange={(e) => changeTheme(e.target.value)}
+            className="w-full p-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text)] focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
+          >
+            {Object.entries(themes).map(([key, theme]) => (
+              <option key={key} value={key}>
+                {theme.name}
+              </option>
+            ))}
+          </select>
         </div>
-      </div>
     </div>
   );
 };

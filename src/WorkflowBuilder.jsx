@@ -135,6 +135,12 @@ function WorkflowBuilder({ onNodeSelected, onNodeConfigChange }) {
 
   const [reactFlowInstance, setReactFlowInstance] = useState(null);
   const [isRunning, setIsRunning] = useState(false);
+
+  // Define the onInit callback here, within the WorkflowBuilder component
+  const onInit = useCallback((instance) => {
+    setReactFlowInstance(instance); // Store the React Flow instance in state
+    instance.zoomTo(1.2); // Set the initial zoom level
+  }, []);
   const [activeWebhookNodeId, setActiveWebhookNodeId] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [nodeToConfigure, setNodeToConfigure] = useState(null);
@@ -583,7 +589,7 @@ function WorkflowBuilder({ onNodeSelected, onNodeConfigChange }) {
                     onNodesChange={onNodesChange}
                     onEdgesChange={onEdgesChange}
                     onConnect={onConnect}
-                    onInit={setReactFlowInstance}
+                    onInit={onInit}
                     onDrop={onDrop}
                     onDragOver={onDragOver}
                     onNodeClick={handleNodeClick}
@@ -596,7 +602,6 @@ function WorkflowBuilder({ onNodeSelected, onNodeConfigChange }) {
                     }, [setNodes, setEdges, showModal])}
                     connectionLineStyle={{ stroke: 'var(--color-secondary)', strokeWidth: 2 }}
                     fitView
-                    attributionPosition="bottom-left"
                 >
                     <Controls className="bg-[var(--color-surface)] shadow-lg border border-[var(--color-border)]" />
                     <MiniMap

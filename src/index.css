@@ -36,3 +36,7 @@ body {
     -ms-overflow-style: none;  /* IE and Edge */
     scrollbar-width: none;  /* Firefox */
 }
+
+.backdrop-blur-sm {
+  backdrop-filter: blur(16px);
+}

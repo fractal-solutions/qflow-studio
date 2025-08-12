@@ -115,19 +115,21 @@ const Sidebar = () => {
   }, {});
 
   return (
-    <aside className="bg-[var(--color-surface)] p-4 border-l border-[var(--color-border)] overflow-y-auto h-full w-1/4 hide-scrollbar">
-        <div className="flex justify-between items-center mb-4">
+    <aside className="bg-[var(--color-surface)] p-4 border-l border-[var(--color-border)] overflow-y-auto h-full w-1/4 hide-scrollbar z-20">
+        <div className="flex justify-between items-center mb-2">
             <h3 className="text-lg font-semibold text-[var(--color-text)]">Available Nodes</h3>
         </div>
-        <div className="relative mb-4">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[var(--color-textMuted)]" />
-          <input
-            type="text"
-            placeholder="Search nodes..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-[var(--color-surfaceHover)] border border-[var(--color-border)] rounded-lg pl-10 pr-4 py-2 text-sm text-[var(--color-text)] focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent outline-none transition-colors"
-          />
+        <div className="sticky top-[-8px] z-10 bg-[var(--color-surface)]/90 pt-2 backdrop-blur-sm">
+          <div className="relative mb-4">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[var(--color-textMuted)]" />
+            <input
+              type="text"
+              placeholder="Search nodes..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full bg-[var(--color-surfaceHover)] border border-[var(--color-border)] rounded-lg pl-10 pr-4 py-2 text-sm text-[var(--color-text)] focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent outline-none transition-colors"
+            />
+          </div>
         </div>
       <div className="space-y-4">
         <div>
