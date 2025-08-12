@@ -201,7 +201,6 @@ const nodeConfigSchemas = {
   WebHookNode: {
     port: { type: 'number', label: 'Port', defaultValue: 3000 },
     path: { type: 'text', label: 'Path', defaultValue: '/webhook' },
-    flow: { type: 'text', label: 'Flow Name to Trigger' },
     sharedSecret: { type: 'text', label: 'Shared Secret' },
     responseStatus: { type: 'number', label: 'Response Status', defaultValue: 200 },
     responseBody: { type: 'json', label: 'Response Body (JSON)' },

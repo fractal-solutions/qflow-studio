@@ -31,6 +31,14 @@ export const nodeConfig = {
       { name: 'prompt', type: 'textarea', label: 'Prompt' },
     ],
   },
+  WebHookNode: {
+    fields: [
+      { name: 'label', type: 'text', label: 'Label' },
+      { name: 'port', type: 'number', label: 'Port', defaultValue: 3000 },
+      { name: 'path', type: 'text', label: 'Path', defaultValue: '/webhook' },
+      { name: 'responseMessage', type: 'text', label: 'Response Message' },
+    ],
+  },
   input: {
     fields: [
         { name: 'label', type: 'text', label: 'Label' },

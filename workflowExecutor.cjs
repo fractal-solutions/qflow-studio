@@ -276,6 +276,37 @@ export const executeWorkflow = async (nodes, edges) => {
     }
   });
 
+  const webhookNodeEntry = qflowNodes.find(node => node.type === 'WebHookNode');
+
+  if (webhookNodeEntry) {
+    const webhookNodeInstance = flowNodes[webhookNodeEntry.id];
+    const targetEdge = edges.find(edge => edge.source === webhookNodeEntry.id);
+
+    if (!targetEdge) {
+      return { success: false, error: 'WebHookNode must be connected to at least one other node.' };
+    }
+
+    const startNodeOfWebhookFlow = flowNodes[targetEdge.target];
+    const webhookFlow = new AsyncFlow(startNodeOfWebhookFlow);
+
+    // The original WebHookNode expects a `flow` object to be passed to it.
+    // We are dynamically creating this flow from the nodes connected to the WebHookNode.
+    webhookNodeInstance.setParams({ ...webhookNodeInstance.params, flow: webhookFlow, responseStatus: 200 });
+
+    try {
+      // The execAsync of the WebHookNode will start the listener.
+      await webhookNodeInstance.execAsync({});
+      const { port, path } = webhookNodeInstance.params;
+      return { success: true, result: `Webhook listener started at http://localhost:${port}${path}`, isWebhookFlow: true };
+    } catch (error) {
+      if (error.code === 'EADDRINUSE') {
+        return { success: false, error: `Port ${webhookNodeInstance.params.port || 3000} is already in use.` };
+      }
+      console.error('Failed to start webhook listener:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
   // Find the actual qflow start node (a qflow node with no incoming edges from other qflow nodes)
   const qflowNodeIds = qflowNodes.map(node => node.id);
   const startNodeId = qflowNodeIds.find(nodeId => {
@@ -294,7 +325,7 @@ export const executeWorkflow = async (nodes, edges) => {
     console.log('Running workflow...');
     const result = await flow.runAsync({});
     console.log('Workflow finished:', result);
-    return { success: true, result };
+    return { success: true, result, isWebhookFlow: false };
   } catch (error) {
     console.error('Workflow failed:', error);
     return { success: false, error: error.message };
@@ -307,6 +338,39 @@ export const executeSingleNode = async (nodeData) => {
     const errorMessage = `Node type ${nodeData.type} not found in nodeMap.`;
     console.error(errorMessage);
     return { success: false, error: errorMessage };
+  }
+
+  // Special handling for WebHookNode as a trigger
+  if (nodeData.type === 'WebHookNode') {
+    const webhookNodeInstance = new NodeClass();
+    const resolvedNodeData = {};
+    for (const key in nodeData.data) {
+      if (key === 'label') {
+        resolvedNodeData[key] = extractLabel(nodeData.data[key]);
+      } else {
+        resolvedNodeData[key] = resolveParameter(nodeData.data[key], {});
+      }
+    }
+    webhookNodeInstance.setParams({ ...resolvedNodeData, responseStatus: 200 });
+
+    // In single node execution, there's no subsequent flow to trigger.
+    // We can start the listener, but it won't trigger any action.
+    // This is more for testing the listener setup itself.
+    try {
+      await webhookNodeInstance.execAsync({});
+      const { port, path } = webhookNodeInstance.params;
+      return { success: true, result: `Webhook listener started at http://localhost:${port}${path}. Note: No flow is attached in single node execution.` };
+    } catch (error) {
+      if (error.code === 'EADDRINUSE') {
+        return { success: false, error: `Port ${webhookNodeInstance.params.port || 3000} is already in use.` };
+      }
+      console.error('Failed to start webhook listener in single node mode:', error);
+      // Provide a more specific error if the flow is the issue.
+      if (error.message.includes('requires a `flow` parameter')) {
+        return { success: false, error: 'Cannot start WebHookNode in isolation. It must be connected to other nodes in a workflow to act as a trigger.' };
+      }
+      return { success: false, error: error.message };
+    }
   }
 
   try {

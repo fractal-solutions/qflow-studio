@@ -293,7 +293,11 @@ function WorkflowBuilder({ onNodeSelected, onNodeConfigChange }) {
       });
       const data = await response.json();
       if (data.success) {
-        showAlert('Success', 'Workflow finished successfully!', 'success');
+        if (data.isWebhookFlow) {
+          showAlert('Success', data.result, 'success'); // Display the result message from the backend
+        } else {
+          showAlert('Success', 'Workflow finished successfully!', 'success');
+        }
       } else {
         showAlert('Error',`Workflow failed`, data.error);
       }
