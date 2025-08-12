@@ -10,6 +10,7 @@ import ReactFlow, {
 } from 'react-flow-renderer';
 import { Save, Play, Pause, Download, Upload } from 'lucide-react';
 import { useTheme } from './contexts/ThemeContext.jsx';
+import AlertDialog from './components/AlertDialog.jsx';
 import Sidebar from './components/Sidebar.jsx';
 
 const initialNodes = [
@@ -52,6 +53,17 @@ function WorkflowBuilder({ onNodeSelected, onNodeConfigChange }) {
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
   const nodesRef = useRef(nodes);
   const edgesRef = useRef(edges);
+
+  const [alertInfo, setAlertInfo] = useState({ isOpen: false, message: '', title: '', type: 'info' });
+  const showAlert = (title, message, type = 'info') => {
+    setAlertInfo({ isOpen: true, title, message, type });
+  };
+  const closeAlert = () => {
+    setAlertInfo({ isOpen: false, message: '', title: '', type: 'info' });
+  };
+
+
+
 
   // Update refs whenever nodes or edges state changes
   useEffect(() => {
@@ -137,7 +149,8 @@ function WorkflowBuilder({ onNodeSelected, onNodeConfigChange }) {
       timestamp: new Date().toISOString(),
     };
     console.log('Saving workflow:', JSON.stringify(flowData, null, 2));
-    alert('Workflow saved! Check console for JSON output.');
+    showAlert('Success', 'Workflow saved! Check console for JSON output.', 'success');
+
   }, [reactFlowInstance]); // Depend on reactFlowInstance
 
   const onExport = useCallback(() => {
@@ -160,7 +173,7 @@ function WorkflowBuilder({ onNodeSelected, onNodeConfigChange }) {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    alert('Workflow exported successfully!');
+    showAlert('Success', 'Workflow exported successfully!', 'success');
   }, [reactFlowInstance]);
 
   const onImport = useCallback((event) => {
@@ -175,53 +188,42 @@ function WorkflowBuilder({ onNodeSelected, onNodeConfigChange }) {
         const importedFlow = JSON.parse(e.target.result);
         if (importedFlow.nodes && importedFlow.edges) {
           const transformedNodes = importedFlow.nodes.map(node => {
-            // If the label is a string, transform it into a React element with icon
-            // Define the default styles to apply to imported nodes
             const defaultNodeStyle = {
               background: 'var(--color-primary)',
               color: 'white',
               border: '2px solid var(--color-primary)',
               borderRadius: '8px',
               padding: '12px 16px',
-              fontSize: '8px', // Enforce 8px font size
-              fontWeight: '600', // Enforce 600 font weight
+              fontSize: '8px',
+              fontWeight: '600',
               boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
             };
 
-            // Define specific styles for 'input' type nodes
             const inputNodeStyle = {
               ...defaultNodeStyle,
               background: 'var(--color-success)',
               border: '2px solid var(--color-success)',
             };
 
-            // Determine the style to apply based on node type
             const styleToApply = node.type === 'input' ? inputNodeStyle : defaultNodeStyle;
 
-            // If the label is a string, transform it into a React element with icon
-            // And apply the consistent style
-            if (typeof node.data.label === 'string') {
-              return {
-                ...node,
-                data: {
-                  ...node.data,
-                  label: (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      {React.createElement(nodeIcons[node.type] || nodeIcons['Node'], { size: 12 })}
-                      <span>{node.data.label}</span>
-                    </div>
-                  ),
-                },
-                style: { // Apply the consistent style here
-                  ...node.style, // Preserve any existing styles from the imported node
-                  ...styleToApply,
-                },
-              };
-            }
-            // If label is already a React element (e.g., from a previous import and re-export),
-            // still ensure the style is consistent.
+            const labelText = (typeof node.data.label === 'string')
+              ? node.data.label
+              : (node.data.label && node.data.label.props && Array.isArray(node.data.label.props.children) && node.data.label.props.children[1] && node.data.label.props.children[1].props)
+                ? node.data.label.props.children[1].props.children
+                : node.type; // Fallback to node type if label is malformed
+
             return {
               ...node,
+              data: {
+                ...node.data,
+                label: (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    {React.createElement(nodeIcons[node.type] || nodeIcons['Node'], { size: 12 })}
+                    <span>{labelText}</span>
+                  </div>
+                ),
+              },
               style: {
                 ...node.style,
                 ...styleToApply,
@@ -229,15 +231,15 @@ function WorkflowBuilder({ onNodeSelected, onNodeConfigChange }) {
             };
           });
 
-          setNodes(transformedNodes); // Set transformed nodes
+          setNodes(transformedNodes);
           setEdges(importedFlow.edges);
-          alert('Workflow imported successfully!');
+          showAlert('Success', 'Workflow imported successfully!', 'success'); 
         } else {
-          alert('Invalid workflow file: Missing nodes or edges data.');
+          showAlert('Error','Invalid workflow file: Missing nodes or edges data.');
         }
       } catch (error) {
-        alert(`Error importing workflow: ${error.message}`);
-        console.error('Error parsing imported workflow:', error);
+        showAlert('Error',`Error importing workflow`,error.message);
+        console.error('Error','Error parsing imported workflow', error);
       }
     };
     reader.readAsText(file);
@@ -291,12 +293,12 @@ function WorkflowBuilder({ onNodeSelected, onNodeConfigChange }) {
       });
       const data = await response.json();
       if (data.success) {
-        alert('Workflow finished successfully!');
+        showAlert('Success', 'Workflow finished successfully!', 'success');
       } else {
-        alert(`Workflow failed: ${data.error}`);
+        showAlert('Error',`Workflow failed`, data.error);
       }
     } catch (error) {
-      alert(`Error running workflow: ${error.message}`);
+      showAlert('Error',`Error running workflow`, error.message);
     } finally {
       setIsRunning(false);
     }
@@ -450,6 +452,13 @@ function WorkflowBuilder({ onNodeSelected, onNodeConfigChange }) {
           onDeleteNode={handleDeleteNode} // Pass the new delete handler
         />
       )}
+      <AlertDialog
+        isOpen={alertInfo.isOpen}
+        title={alertInfo.title}
+        message={alertInfo.message}
+        type={alertInfo.type}
+        onClose={closeAlert}
+      />
     </div>
   );
 }

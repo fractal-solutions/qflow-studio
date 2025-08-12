@@ -83,6 +83,7 @@ const integratedNodes = {
 
 const Sidebar = () => {
   const [collapsedCategories, setCollapsedCategories] = useState({});
+  const [searchQuery, setSearchQuery] = useState('');
 
   const toggleCategory = (category) => {
     setCollapsedCategories(prevState => ({
@@ -96,10 +97,36 @@ const Sidebar = () => {
     event.dataTransfer.effectAllowed = 'move';
   };
 
+  const filteredCoreNodes = coreNodes.filter(node =>
+    node.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    node.description.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const filteredIntegratedNodes = Object.entries(integratedNodes).reduce((acc, [category, nodes]) => {
+    const filteredNodes = nodes.filter(node =>
+      node.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      node.description.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+    if (filteredNodes.length > 0) {
+      acc[category] = filteredNodes;
+    }
+    return acc;
+  }, {});
+
   return (
     <aside className="bg-[var(--color-surface)] p-4 border-l border-[var(--color-border)] overflow-y-auto h-full w-1/4 hide-scrollbar">
         <div className="flex justify-between items-center mb-4">
             <h3 className="text-lg font-semibold text-[var(--color-text)]">Available Nodes</h3>
+        </div>
+        <div className="relative mb-4">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[var(--color-textMuted)]" />
+          <input
+            type="text"
+            placeholder="Search nodes..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full bg-[var(--color-surfaceHover)] border border-[var(--color-border)] rounded-lg pl-10 pr-4 py-2 text-sm text-[var(--color-text)] focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent outline-none transition-colors"
+          />
         </div>
       <div className="space-y-4">
         <div>
@@ -111,7 +138,7 @@ const Sidebar = () => {
           </h4>
           {!collapsedCategories['Core Nodes'] && (
             <div className="space-y-2">
-              {coreNodes.map((node) => (
+              {filteredCoreNodes.map((node) => (
                 <div
                   key={node.name}
                   onDragStart={(event) => onDragStart(event, node.name)}
@@ -137,7 +164,7 @@ const Sidebar = () => {
           </h4>
           {!collapsedCategories['Integrated Nodes'] && (
             <div>
-              {Object.entries(integratedNodes).map(([category, nodes]) => (
+              {Object.entries(filteredIntegratedNodes).map(([category, nodes]) => (
                 <div key={category} className="mb-4">
                   <button
                     onClick={() => toggleCategory(category)}
