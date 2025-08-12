@@ -52,6 +52,20 @@ const resolveNodeParameters = (nodeInstance, shared) => {
   return resolvedParams;
 };
 
+const extractLabel = (label) => {
+	if (typeof label === 'string') {
+	  return label;
+	}
+	if (typeof label === 'object' && label !== null && label.props && label.props.children) {
+	  const children = Array.isArray(label.props.children) ? label.props.children : [label.props.children];
+	  const span = children.find(child => child.type === 'span');
+	  if (span && span.props && typeof span.props.children === 'string') {
+		return span.props.children;
+	  }
+	}
+	return 'default'; // fallback
+  };
+
 const nodeMap = {
   Node,
   Flow,
@@ -128,7 +142,11 @@ export const executeWorkflow = async (nodes, edges) => {
       // Resolve parameters for initial setParams (only static values)
       const resolvedNodeData = {};
       for (const key in node.data) {
-        resolvedNodeData[key] = resolveParameter(node.data[key], {}); // Pass an empty shared object
+		if (key === 'label') {
+			resolvedNodeData[key] = extractLabel(node.data[key]);
+		  } else {
+			resolvedNodeData[key] = resolveParameter(node.data[key], {}); // Pass an empty shared object
+		  }
       }
       flowNode.setParams(resolvedNodeData);
 
@@ -179,7 +197,7 @@ export const executeWorkflow = async (nodes, edges) => {
         // Permanently update flowNode.params with resolved values
         flowNode.params = currentResolvedParams;
 
-        console.log(`WorkflowExecutor: ${flowNode.type} prepAsync - this.params before originalPrepAsync/execAsync:`, flowNode.params);
+        console.log(`WorkflowExecutor: ${flowNode.params.label} prepAsync - this.params before originalPrepAsync/execAsync:`, flowNode.params);
 
         let prepResult = currentResolvedParams; // Initialize prepResult with resolved params
         if (originalPrepAsync) {
@@ -223,7 +241,7 @@ export const executeWorkflow = async (nodes, edges) => {
         // Wrap postAsync for AsyncNodes
         flowNode.postAsync = async (shared, prepRes, execRes) => {
           shared[outputKey] = execRes; // Store execRes in shared state
-          console.log(`WorkflowExecutor: Stored output of ${node.type} in shared.${outputKey}:`, execRes);
+          console.log(`WorkflowExecutor: Stored output of ${flowNode.params.label} in shared.${outputKey}:`, execRes);
           if (originalPostAsync) {
             return await originalPostAsync(shared, prepRes, execRes);
           } else {
@@ -234,7 +252,7 @@ export const executeWorkflow = async (nodes, edges) => {
         // Wrap post for synchronous Nodes (if applicable)
         flowNode.post = (shared, prepRes, execRes) => {
           shared[outputKey] = execRes; // Store execRes in shared state
-          console.log(`WorkflowExecutor: Stored output of ${node.type} in shared.${outputKey}:`, execRes);
+          console.log(`WorkflowExecutor: Stored output of ${flowNode.params.label} in shared.${outputKey}:`, execRes);
           if (originalPost) {
             return originalPost(shared, prepRes, execRes);
           } else {
@@ -300,12 +318,20 @@ export const executeSingleNode = async (nodeData) => {
     // Resolve parameters for initial setParams (only static values)
     const resolvedNodeData = {};
     for (const key in nodeData.data) {
-      resolvedNodeData[key] = resolveParameter(nodeData.data[key], {}); // Pass an empty shared object
+		if (key === 'label') {
+			resolvedNodeData[key] = extractLabel(nodeData.data[key]);
+		  } else {
+			resolvedNodeData[key] = resolveParameter(nodeData.data[key], {}); // Pass an empty shared object
+		  }
     }
 
     // Resolve parameters for initial setParams (only static values)
     for (const key in nodeData.data) {
-      resolvedNodeData[key] = resolveParameter(nodeData.data[key], {}); // Pass an empty shared object
+		if (key === 'label') {
+			resolvedNodeData[key] = extractLabel(nodeData.data[key]);
+		  } else {
+			resolvedNodeData[key] = resolveParameter(nodeData.data[key], {}); // Pass an empty shared object
+		  }
     }
     flowNode.setParams(resolvedNodeData);
 
