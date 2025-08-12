@@ -4,7 +4,7 @@ import { Save, X, Trash2, FileText, Terminal, Globe, BrainCircuit, Cpu, Database
 import ConfirmationDialog from './ConfirmationDialog'; // Import ConfirmationDialog
 
 // Map node types to their corresponding Lucide icons
-const nodeIcons = {
+export const nodeIcons = {
   Node: Cpu,
   Flow: GitMerge,
   AsyncNode: Cpu,

@@ -16,16 +16,24 @@ const initialNodes = [
   {
     id: '1',
     type: 'input',
-    data: { label: 'Start Node' },
+    data: {
+      label: (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+          {React.createElement(nodeIcons['Node'], { size: 12 })} {/* Use a generic Node icon or specific input icon */}
+          <span>Start Node</span>
+        </div>
+      ),
+    },
     position: { x: 250, y: 25 },
     style: {
       background: 'var(--color-success)',
       color: 'white',
       border: '2px solid var(--color-success)',
-      borderRadius: '12px',
-      padding: '10px',
-      fontSize: '9px',
-      fontWeight: '500',
+      borderRadius: '8px',
+      padding: '12px 16px',
+      fontSize: '8px', // Changed to 8px
+      fontWeight: '600',
+      boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
     },
   },
 ];
@@ -35,7 +43,7 @@ const initialEdges = [];
 let id = 2;
 const getId = () => `${id++}`;
 
-import NodeConfigModal from './components/NodeConfigModal.jsx';
+import NodeConfigModal, { nodeIcons } from './components/NodeConfigModal.jsx';
 
 function WorkflowBuilder({ onNodeSelected, onNodeConfigChange }) {
   const { theme } = useTheme();
@@ -89,7 +97,12 @@ function WorkflowBuilder({ onNodeSelected, onNodeConfigChange }) {
         type,
         position,
         data: {
-          label: `${type}`,
+          label: (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              {React.createElement(nodeIcons[type] || nodeIcons['Node'], { size: 12 })} {/* Use specific icon or generic Node icon */}
+              <span>{type}</span>
+            </div>
+          ),
           // Initialize with default values for common parameters
           // This helps ensure the data structure is preserved by React Flow
           ...(type === 'SharedStateWriterNode' && { key: '', value: '' }),
@@ -99,10 +112,11 @@ function WorkflowBuilder({ onNodeSelected, onNodeConfigChange }) {
             background: 'var(--color-primary)',
             color: 'white',
             border: '2px solid var(--color-primary)',
-            borderRadius: '12px',
-            padding: '10px',
-            fontSize: '9px',
-            fontWeight: '500',
+            borderRadius: '8px',
+            padding: '12px 16px',
+            fontSize: '8px', // Changed to 8px
+            fontWeight: '600',
+            boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
           },
       };
 
@@ -160,7 +174,62 @@ function WorkflowBuilder({ onNodeSelected, onNodeConfigChange }) {
       try {
         const importedFlow = JSON.parse(e.target.result);
         if (importedFlow.nodes && importedFlow.edges) {
-          setNodes(importedFlow.nodes);
+          const transformedNodes = importedFlow.nodes.map(node => {
+            // If the label is a string, transform it into a React element with icon
+            // Define the default styles to apply to imported nodes
+            const defaultNodeStyle = {
+              background: 'var(--color-primary)',
+              color: 'white',
+              border: '2px solid var(--color-primary)',
+              borderRadius: '8px',
+              padding: '12px 16px',
+              fontSize: '8px', // Enforce 8px font size
+              fontWeight: '600', // Enforce 600 font weight
+              boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
+            };
+
+            // Define specific styles for 'input' type nodes
+            const inputNodeStyle = {
+              ...defaultNodeStyle,
+              background: 'var(--color-success)',
+              border: '2px solid var(--color-success)',
+            };
+
+            // Determine the style to apply based on node type
+            const styleToApply = node.type === 'input' ? inputNodeStyle : defaultNodeStyle;
+
+            // If the label is a string, transform it into a React element with icon
+            // And apply the consistent style
+            if (typeof node.data.label === 'string') {
+              return {
+                ...node,
+                data: {
+                  ...node.data,
+                  label: (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      {React.createElement(nodeIcons[node.type] || nodeIcons['Node'], { size: 12 })}
+                      <span>{node.data.label}</span>
+                    </div>
+                  ),
+                },
+                style: { // Apply the consistent style here
+                  ...node.style, // Preserve any existing styles from the imported node
+                  ...styleToApply,
+                },
+              };
+            }
+            // If label is already a React element (e.g., from a previous import and re-export),
+            // still ensure the style is consistent.
+            return {
+              ...node,
+              style: {
+                ...node.style,
+                ...styleToApply,
+              },
+            };
+          });
+
+          setNodes(transformedNodes); // Set transformed nodes
           setEdges(importedFlow.edges);
           alert('Workflow imported successfully!');
         } else {
