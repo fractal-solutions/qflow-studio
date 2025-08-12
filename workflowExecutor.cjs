@@ -116,11 +116,13 @@ export const executeWorkflow = async (nodes, edges) => {
 
   const flowNodes = {};
   const qflowNodes = nodes.filter(node => node.type !== 'input'); // Filter out React Flow's 'input' node
-
+  const sharedKey = [];
   // Instantiate all qflow nodes
   qflowNodes.forEach(node => {
     const NodeClass = nodeMap[node.type];
     if (NodeClass) {
+      console.log('node---',node)
+      sharedKey.push({key: node.data.outputToSharedKey, nodeType: node.type})
       const flowNode = new NodeClass();
       
       // Store original structured parameters for potential later use (e.g., saving back to UI)
@@ -140,14 +142,30 @@ export const executeWorkflow = async (nodes, edges) => {
       // Wrap prepAsync to resolve parameters before execution
       flowNode.prepAsync = async (shared) => {
         const currentResolvedParams = resolveNodeParameters(flowNode, shared);
-        
+
+        // --- START OF PATCH FOR RESOLVING GISNode addressSharedKey ---
+        if (flowNode.params.label === 'GISNode' && currentResolvedParams.addressSharedKey !== undefined) {
+            const resolvedSharedAddress = getNestedProperty(shared, currentResolvedParams.addressSharedKey);
+            if (resolvedSharedAddress !== undefined) {
+                currentResolvedParams.address = resolvedSharedAddress; // Overwrite 'address' with resolved shared value
+            }
+            delete currentResolvedParams.addressSharedKey; // Remove the key after resolution
+        }
+        // --- END OF PATCH FOR RESOLVING GISNode addressSharedKey ---
+
         // Special handling for GISNode to nest operation-specific parameters under 'params'
-        if (flowNode.type === 'GISNode') {
+        if (flowNode.params.label === 'GISNode') { // Corrected condition
           const gisParams = {};
+          
+          // If address is present (either static or resolved from shared state by resolveNodeParameters)
           if (currentResolvedParams.address !== undefined) {
             gisParams.address = currentResolvedParams.address;
             delete currentResolvedParams.address;
           }
+          // addressSharedKey is already resolved into currentResolvedParams.address by resolveNodeParameters
+          // So, we don't need to explicitly handle addressSharedKey here.
+          // delete currentResolvedParams.addressSharedKey; // This line is now redundant due to the patch above
+
           if (currentResolvedParams.latitude !== undefined) {
             gisParams.latitude = currentResolvedParams.latitude;
             delete currentResolvedParams.latitude;

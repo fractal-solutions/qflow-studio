@@ -137,10 +137,21 @@ function WorkflowBuilder({ onNodeSelected, onNodeConfigChange }) {
       const transformedNodes = currentNodes.map(node => {
         if (node.type === 'GISNode') {
           const newData = { ...node.data };
-          newData.params = {}; // Initialize params object
-          if (newData.operation === 'geocode' && newData.address) {
-            newData.params.address = newData.address;
-            delete newData.address;
+          console.log('workflow data ', newData.params.address, newData.addressSharedKey)
+          newData.addressSharedKey = newData.addressSharedKey.value;
+          //newData.params = {}; // Initialize params object
+          if (newData.operation === 'geocode') {
+            if (typeof newData.addressSharedKey === 'string' && newData.addressSharedKey.trim() !== '') { // Check for non-empty string
+              // If addressSharedKey is present and not empty, the backend WorkflowExecutor will handle resolving the address from shared state.
+              // We don't need to set newData.params.address here.
+              // Ensure newData.address is not passed if addressSharedKey is used.
+              //newData.address = newData.addressSharedKey.value;
+              //delete newData.address;
+            } else if (newData.params.address) {
+              // If no addressSharedKey, or it's empty, but address is present, use it as a static address.
+              newData.address = newData.params.address;
+              delete newData.addressSharedKey;
+            }
           } else if (newData.operation === 'reverse_geocode' && newData.latitude && newData.longitude) {
             newData.params.lat = newData.latitude;
             newData.params.lng = newData.longitude;

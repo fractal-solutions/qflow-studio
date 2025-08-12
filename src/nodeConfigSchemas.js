@@ -262,6 +262,7 @@ const nodeConfigSchemas = {
   GISNode: {
     operation: { type: 'select', label: 'Operation', options: ['geocode', 'reverse_geocode'] },
     address: { type: 'text', label: 'Address (for geocode)' },
+    addressSharedKey: { type: 'text', label: 'Shared Key for Address' },
     latitude: { type: 'number', label: 'Latitude (for reverse_geocode)' },
     longitude: { type: 'number', label: 'Longitude (for reverse_geocode)' },
     provider: { type: 'select', label: 'Provider', options: ['openstreetmap', 'google'] },

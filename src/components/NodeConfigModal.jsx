@@ -75,17 +75,27 @@ const NodeConfigModal = ({ node, onConfigChange, onClose, onDeleteNode }) => {
   useEffect(() => {
     let displayNodeData = { ...node.data };
     // If it's a GISNode, flatten the 'params' object for display in the form
-    if (node.type === 'GISNode' && node.data.params) {
-      if (node.data.params.address !== undefined) {
+    if (node.type === 'GISNode') {
+      // Handle address for GISNode
+      if (typeof node.data.addressSharedKey === 'string' && node.data.addressSharedKey.trim() !== '') {
+        displayNodeData.address = { type: 'shared', value: node.data.addressSharedKey };
+      } else if (node.data.params && node.data.params.address !== undefined) {
         displayNodeData.address = { type: 'static', value: node.data.params.address };
+      } else {
+        displayNodeData.address = { type: 'static', value: '' }; // Default to static empty
       }
-      if (node.data.params.lat !== undefined) {
+
+      // Handle latitude and longitude for GISNode (assuming they are always static for now)
+      if (node.data.params && node.data.params.lat !== undefined) {
         displayNodeData.latitude = { type: 'static', value: node.data.params.lat };
+      } else {
+        displayNodeData.latitude = { type: 'static', value: '' };
       }
-      if (node.data.params.lng !== undefined) {
+      if (node.data.params && node.data.params.lng !== undefined) {
         displayNodeData.longitude = { type: 'static', value: node.data.params.lng };
+      } else {
+        displayNodeData.longitude = { type: 'static', value: '' };
       }
-      // No need to delete displayNodeData.params here, as it's just for display
     }
 
     // Initialize parameters that can be sourced from shared state with default structure
@@ -157,6 +167,7 @@ const NodeConfigModal = ({ node, onConfigChange, onClose, onDeleteNode }) => {
     if (node.type === 'GISNode') {
       dataToSave.params = {};
       if (nodeData.operation === 'geocode' && nodeData.address) {
+        console.log('node data pre save: ',nodeData)
         dataToSave.params.address = nodeData.address.value;
         delete dataToSave.address; // Remove the flat address
       } else if (nodeData.operation === 'reverse_geocode' && nodeData.latitude && nodeData.longitude) {
@@ -203,6 +214,8 @@ const NodeConfigModal = ({ node, onConfigChange, onClose, onDeleteNode }) => {
     }
 
     try {
+      console.log('sent: ', dataToSend)
+      console.log(nodeData)
       const response = await fetch('http://localhost:3000/execute-node', {
         method: 'POST',
         headers: {
