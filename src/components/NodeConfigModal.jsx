@@ -423,20 +423,60 @@ const NodeConfigModal = ({ node, onConfigChange, onClose, onDeleteNode }) => {
                 </select>
               )}
               {config.type === 'json' && (
-                <textarea
-                  id={key}
-                  name={key}
-                  value={JSON.stringify(nodeData[key], null, 2) || ''}
-                  onChange={(e) => {
-                    try {
-                      setNodeData(prevData => ({ ...prevData, [key]: JSON.parse(e.target.value) }));
-                    } catch (error) {
-                      console.error("Invalid JSON input:", error);
-                    }
-                  }}
-                  rows={config.rows || 6}
-                  className="w-full p-2.5 border border-[var(--color-border)] rounded-md bg-[var(--color-background)] text-[var(--color-text)] font-mono text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent transition-all duration-200"
-                />
+                <div className="space-y-2">
+                  <div className="flex items-center space-x-4">
+                    <label className="inline-flex items-center">
+                      <input
+                        type="radio"
+                        className="form-radio text-[var(--color-primary)]"
+                        name={`${key}_sourceType`}
+                        value="static"
+                        checked={(!nodeData[key] || nodeData[key].type === 'static')}
+                        onChange={handleChange}
+                      />
+                      <span className="ml-2 text-sm text-[var(--color-textSecondary)]">Static Value</span>
+                    </label>
+                    <label className="inline-flex items-center">
+                      <input
+                        type="radio"
+                        className="form-radio text-[var(--color-primary)]"
+                        name={`${key}_sourceType`}
+                        value="shared"
+                        checked={nodeData[key]?.type === 'shared'}
+                        onChange={handleChange}
+                      />
+                      <span className="ml-2 text-sm text-[var(--color-textSecondary)]">From Shared State</span>
+                    </label>
+                  </div>
+                  {(!nodeData[key] || nodeData[key].type === 'static') && (
+                    <textarea
+                      id={`${key}_staticValue`}
+                      name={`${key}_staticValue`}
+                      value={JSON.stringify(nodeData[key]?.value || {}, null, 2)} // Ensure value is stringified JSON
+                      onChange={(e) => {
+                        try {
+                          setNodeData(prevData => ({ ...prevData, [key]: { type: 'static', value: JSON.parse(e.target.value) } }));
+                        } catch (error) {
+                          console.error("Invalid JSON input:", error);
+                          // Optionally, set an error state or prevent update
+                        }
+                      }}
+                      rows={config.rows || 6}
+                      className="w-full p-2.5 border border-[var(--color-border)] rounded-md bg-[var(--color-background)] text-[var(--color-text)] font-mono text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent transition-all duration-200"
+                    />
+                  )}
+                  {nodeData[key]?.type === 'shared' && (
+                    <input
+                      type="text"
+                      id={`${key}_sharedKey`}
+                      name={`${key}_sharedKey`}
+                      value={nodeData[key]?.value || ''}
+                      onChange={handleChange}
+                      placeholder="e.g., my_data.result or apiResponse.body"
+                      className="w-full p-2.5 border border-[var(--color-border)] rounded-md bg-[var(--color-background)] text-[var(--color-text)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent transition-all duration-200"
+                    />
+                  )}
+                </div>
               )}
             </div>
           ))}

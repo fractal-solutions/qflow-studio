@@ -8,7 +8,7 @@ import ReactFlow, {
   addEdge,
   ReactFlowProvider,
 } from 'react-flow-renderer';
-import { Save, Play, Pause } from 'lucide-react';
+import { Save, Play, Pause, Download, Upload } from 'lucide-react';
 import { useTheme } from './contexts/ThemeContext.jsx';
 import Sidebar from './components/Sidebar.jsx';
 
@@ -125,6 +125,54 @@ function WorkflowBuilder({ onNodeSelected, onNodeConfigChange }) {
     console.log('Saving workflow:', JSON.stringify(flowData, null, 2));
     alert('Workflow saved! Check console for JSON output.');
   }, [reactFlowInstance]); // Depend on reactFlowInstance
+
+  const onExport = useCallback(() => {
+    const currentNodes = reactFlowInstance.getNodes();
+    const currentEdges = reactFlowInstance.getEdges();
+
+    const flowData = {
+      nodes: currentNodes,
+      edges: currentEdges,
+      timestamp: new Date().toISOString(),
+    };
+
+    const jsonString = JSON.stringify(flowData, null, 2);
+    const blob = new Blob([jsonString], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `qflow-workflow-${Date.now()}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    alert('Workflow exported successfully!');
+  }, [reactFlowInstance]);
+
+  const onImport = useCallback((event) => {
+    const file = event.target.files[0];
+    if (!file) {
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const importedFlow = JSON.parse(e.target.result);
+        if (importedFlow.nodes && importedFlow.edges) {
+          setNodes(importedFlow.nodes);
+          setEdges(importedFlow.edges);
+          alert('Workflow imported successfully!');
+        } else {
+          alert('Invalid workflow file: Missing nodes or edges data.');
+        }
+      } catch (error) {
+        alert(`Error importing workflow: ${error.message}`);
+        console.error('Error parsing imported workflow:', error);
+      }
+    };
+    reader.readAsText(file);
+  }, [setNodes, setEdges]);
 
   const onRun = useCallback(async () => {
     setIsRunning(true);
@@ -248,6 +296,27 @@ function WorkflowBuilder({ onNodeSelected, onNodeConfigChange }) {
             <Save className="w-4 h-4" />
             <span>Save Workflow</span>
           </button>
+          <button
+            onClick={onExport} // New Export button
+            className="flex items-center space-x-2 px-4 py-2 bg-[var(--color-secondary)] text-white rounded-lg hover:bg-[var(--color-secondaryHover)] transition-colors font-medium"
+          >
+            <Download className="w-4 h-4" />
+            <span>Export Workflow</span>
+          </button>
+          <button
+            onClick={() => document.getElementById('import-workflow-input').click()} // Trigger hidden file input
+            className="flex items-center space-x-2 px-4 py-2 bg-[var(--color-tertiary)] text-white rounded-lg hover:bg-[var(--color-tertiaryHover)] transition-colors font-medium"
+          >
+            <Upload className="w-4 h-4" />
+            <span>Import Workflow</span>
+          </button>
+          <input
+            type="file"
+            id="import-workflow-input"
+            style={{ display: 'none' }} // Hide the input
+            accept=".json"
+            onChange={onImport}
+          />
         </div>
       </div>
 

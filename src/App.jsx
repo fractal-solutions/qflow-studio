@@ -104,7 +104,7 @@ function App() {
     <ThemeProvider>
       <div className="h-screen flex bg-[var(--color-background)]">
         {/* Sidebar */}
-        <div className="w-64 bg-[var(--color-surface)] shadow-lg border-r border-[var(--color-border)]">
+        <div className="w-56 bg-[var(--color-surface)] shadow-lg border-r border-[var(--color-border)]">
           <div className="p-6 border-b border-[var(--color-border)]">
             <h1 className="text-xl font-bold text-[var(--color-text)]">QFlow Studio</h1>
             <p className="text-sm text-[var(--color-textSecondary)] mt-1">Visual Workflow Builder</p>

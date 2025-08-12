@@ -33,7 +33,7 @@ const nodeConfigSchemas = {
     memoryPath: { type: 'text', label: 'Memory Path', defaultValue: './agent_memories' },
   },
   TransformNode: {
-    input: { type: 'json', label: 'Input Data (JSON)' },
+    input: { type: 'json', label: 'Input Data' }, // Label simplified, type remains json
     transformFunction: { type: 'textarea', label: 'Transform Function (JS)', placeholder: '(data) => data.map(x => x * 2)' },
   },
   CodeInterpreterNode: {

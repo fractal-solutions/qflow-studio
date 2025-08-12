@@ -97,7 +97,7 @@ const Sidebar = () => {
   };
 
   return (
-    <aside className="w-64 bg-[var(--color-surface)] p-4 border-l border-[var(--color-border)] overflow-y-auto h-full w-1/4 hide-scrollbar">
+    <aside className="bg-[var(--color-surface)] p-4 border-l border-[var(--color-border)] overflow-y-auto h-full w-1/4 hide-scrollbar">
         <div className="flex justify-between items-center mb-4">
             <h3 className="text-lg font-semibold text-[var(--color-text)]">Available Nodes</h3>
         </div>
