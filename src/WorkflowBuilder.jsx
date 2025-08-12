@@ -295,6 +295,22 @@ function WorkflowBuilder({ onNodeSelected, onNodeConfigChange }) {
       if (data.success) {
         if (data.isWebhookFlow) {
           showAlert('Success', data.result, 'success'); // Display the result message from the backend
+          // Update the style of the active webhook node
+          setNodes((nds) =>
+            nds.map((node) => {
+              if (node.id === data.activeWebhookNodeId) {
+                return {
+                  ...node,
+                  style: {
+                    ...node.style,
+                    border: '1px solid white', // Green border
+                    boxShadow: '0 0 15px white', // White glow
+                  },
+                };
+              }
+              return node;
+            })
+          );
         } else {
           showAlert('Success', 'Workflow finished successfully!', 'success');
         }

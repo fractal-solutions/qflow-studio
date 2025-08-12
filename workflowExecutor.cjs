@@ -297,7 +297,7 @@ export const executeWorkflow = async (nodes, edges) => {
       // The execAsync of the WebHookNode will start the listener.
       await webhookNodeInstance.execAsync({});
       const { port, path } = webhookNodeInstance.params;
-      return { success: true, result: `Webhook listener started at http://localhost:${port}${path}`, isWebhookFlow: true };
+      return { success: true, result: `Webhook listener started at http://localhost:${port}${path}`, isWebhookFlow: true, activeWebhookNodeId: webhookNodeEntry.id };
     } catch (error) {
       if (error.code === 'EADDRINUSE') {
         return { success: false, error: `Port ${webhookNodeInstance.params.port || 3000} is already in use.` };
