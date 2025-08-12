@@ -46,7 +46,6 @@ function App() {
           <div className="flex h-full">
             <WorkflowBuilder
               onNodeSelected={handleNodeSelected}
-              onNodeConfigChange={handleNodeConfigChange}
             />
             {/* {!isRightSidebarCollapsed && (
               <RightSidebar

@@ -73,20 +73,100 @@ const NodeConfigModal = ({ node, onConfigChange, onClose, onDeleteNode }) => {
   const NodeIcon = nodeIcons[node.type] || Cpu; // Default to Cpu icon if not found
 
   useEffect(() => {
-    setNodeData(node.data);
+    let displayNodeData = { ...node.data };
+    // If it's a GISNode, flatten the 'params' object for display in the form
+    if (node.type === 'GISNode' && node.data.params) {
+      if (node.data.params.address !== undefined) {
+        displayNodeData.address = { type: 'static', value: node.data.params.address };
+      }
+      if (node.data.params.lat !== undefined) {
+        displayNodeData.latitude = { type: 'static', value: node.data.params.lat };
+      }
+      if (node.data.params.lng !== undefined) {
+        displayNodeData.longitude = { type: 'static', value: node.data.params.lng };
+      }
+      // No need to delete displayNodeData.params here, as it's just for display
+    }
+
+    // Initialize parameters that can be sourced from shared state with default structure
+    // This prevents errors when accessing .type on undefined
+    if (schema) { // Ensure schema exists for the node type
+      Object.entries(schema).forEach(([key, config]) => {
+        if ((config.type === 'text' || config.type === 'textarea' || config.type === 'number') &&
+            (displayNodeData[key] === undefined || typeof displayNodeData[key] !== 'object' || displayNodeData[key].type === undefined)) {
+          displayNodeData[key] = { type: 'static', value: displayNodeData[key] || '' };
+        }
+      });
+    }
+
+    setNodeData(displayNodeData);
     setExecutionResult(null); // Clear previous results when node changes
-  }, [node.data]);
+  }, [node.data, node.type, schema]); // Add schema to dependency array
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setNodeData(prevData => ({
-      ...prevData,
-      [name]: type === 'checkbox' ? checked : value
-    }));
+
+    setNodeData(prevData => {
+      const newParamValue = type === 'checkbox' ? checked : value;
+      
+      // For parameters that can be sourced from shared state
+      if (name.endsWith('_sourceType')) {
+        const paramName = name.replace('_sourceType', '');
+        const newSourceType = newParamValue;
+        return {
+          ...prevData,
+          [paramName]: {
+            ...prevData[paramName],
+            type: newSourceType,
+            // Reset value based on new source type
+            value: newSourceType === 'static' ? (prevData[paramName]?.value || '') : (prevData[paramName]?.value || '')
+          }
+        };
+      } else if (name.endsWith('_sharedKey')) {
+        const paramName = name.replace('_sharedKey', '');
+        return {
+          ...prevData,
+          [paramName]: {
+            ...prevData[paramName],
+            value: newParamValue,
+            type: 'shared' // Explicitly set type to 'shared'
+          }
+        };
+      } else if (name.endsWith('_staticValue')) {
+        const paramName = name.replace('_staticValue', '');
+        return {
+          ...prevData,
+          [paramName]: {
+            ...prevData[paramName],
+            value: newParamValue,
+            type: 'static' // Explicitly set type to 'static'
+          }
+        };
+      } else {
+        // For other types (number, select, json, boolean directly)
+        return {
+          ...prevData,
+          [name]: newParamValue
+        };
+      }
+    });
   };
 
   const handleSave = () => {
-    onConfigChange(node.id, nodeData);
+    let dataToSave = { ...nodeData };
+    if (node.type === 'GISNode') {
+      dataToSave.params = {};
+      if (nodeData.operation === 'geocode' && nodeData.address) {
+        dataToSave.params.address = nodeData.address.value;
+        delete dataToSave.address; // Remove the flat address
+      } else if (nodeData.operation === 'reverse_geocode' && nodeData.latitude && nodeData.longitude) {
+        dataToSave.params.lat = nodeData.latitude.value;
+        dataToSave.params.lng = nodeData.longitude.value;
+        delete dataToSave.latitude; // Remove flat latitude
+        delete dataToSave.longitude; // Remove flat longitude
+      }
+    }
+    onConfigChange(node.id, dataToSave);
     onClose();
   };
 
@@ -108,13 +188,27 @@ const NodeConfigModal = ({ node, onConfigChange, onClose, onDeleteNode }) => {
     setIsExecuting(true);
     setExecutionResult(null); // Clear previous results
 
+    let dataToSend = { ...nodeData };
+    if (node.type === 'GISNode') {
+      dataToSend.params = {};
+      if (dataToSend.operation === 'geocode' && dataToSend.address) {
+        dataToSend.params.address = dataToSend.address.value;
+        delete dataToSend.address; // Remove the flat address
+      } else if (dataToSend.operation === 'reverse_geocode' && dataToSend.latitude && dataToSend.longitude) {
+        dataToSend.params.lat = dataToSend.latitude.value;
+        dataToSend.params.lng = dataToSend.longitude.value;
+        delete dataToSend.latitude; // Remove flat latitude
+        delete dataToSend.longitude; // Remove flat longitude
+      }
+    }
+
     try {
       const response = await fetch('http://localhost:3000/execute-node', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ nodeData: { type: node.type, data: nodeData } }),
+        body: JSON.stringify({ nodeData: { type: node.type, data: dataToSend } }),
       });
       const result = await response.json();
       setExecutionResult(result);
@@ -182,15 +276,54 @@ const NodeConfigModal = ({ node, onConfigChange, onClose, onDeleteNode }) => {
                 {config.label || key}
               </label>
               {config.type === 'text' && (
-                <input
-                  type="text"
-                  id={key}
-                  name={key}
-                  value={nodeData[key] || ''}
-                  onChange={handleChange}
-                  placeholder={config.placeholder || ''}
-                  className="w-full p-2.5 border border-[var(--color-border)] rounded-md bg-[var(--color-background)] text-[var(--color-text)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent transition-all duration-200"
-                />
+                <div className="space-y-2">
+                  <div className="flex items-center space-x-4">
+                    <label className="inline-flex items-center">
+                      <input
+                        type="radio"
+                        className="form-radio text-[var(--color-primary)]"
+                        name={`${key}_sourceType`}
+                        value="static"
+                        checked={(!nodeData[key] || nodeData[key].type === 'static')}
+                        onChange={handleChange}
+                      />
+                      <span className="ml-2 text-sm text-[var(--color-textSecondary)]">Static Value</span>
+                    </label>
+                    <label className="inline-flex items-center">
+                      <input
+                        type="radio"
+                        className="form-radio text-[var(--color-primary)]"
+                        name={`${key}_sourceType`}
+                        value="shared"
+                        checked={nodeData[key]?.type === 'shared'}
+                        onChange={handleChange}
+                      />
+                      <span className="ml-2 text-sm text-[var(--color-textSecondary)]">From Shared State</span>
+                    </label>
+                  </div>
+                  {(!nodeData[key] || nodeData[key].type === 'static') && (
+                    <input
+                      type="text"
+                      id={`${key}_staticValue`}
+                      name={`${key}_staticValue`}
+                      value={nodeData[key]?.value || ''}
+                      onChange={handleChange}
+                      placeholder={config.placeholder || ''}
+                      className="w-full p-2.5 border border-[var(--color-border)] rounded-md bg-[var(--color-background)] text-[var(--color-text)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent transition-all duration-200"
+                    />
+                  )}
+                  {nodeData[key]?.type === 'shared' && (
+                    <input
+                      type="text"
+                      id={`${key}_sharedKey`}
+                      name={`${key}_sharedKey`}
+                      value={nodeData[key]?.value || ''}
+                      onChange={handleChange}
+                      placeholder="e.g., my_data.result or apiResponse.body"
+                      className="w-full p-2.5 border border-[var(--color-border)] rounded-md bg-[var(--color-background)] text-[var(--color-text)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent transition-all duration-200"
+                    />
+                  )}
+                </div>
               )}
               {config.type === 'number' && (
                 <input
@@ -204,15 +337,54 @@ const NodeConfigModal = ({ node, onConfigChange, onClose, onDeleteNode }) => {
                 />
               )}
               {config.type === 'textarea' && (
-                <textarea
-                  id={key}
-                  name={key}
-                  value={nodeData[key] || ''}
-                  onChange={handleChange}
-                  placeholder={config.placeholder || ''}
-                  rows={config.rows || 3}
-                  className="w-full p-2.5 border border-[var(--color-border)] rounded-md bg-[var(--color-background)] text-[var(--color-text)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent transition-all duration-200"
-                />
+                <div className="space-y-2">
+                  <div className="flex items-center space-x-4">
+                    <label className="inline-flex items-center">
+                      <input
+                        type="radio"
+                        className="form-radio text-[var(--color-primary)]"
+                        name={`${key}_sourceType`}
+                        value="static"
+                        checked={(!nodeData[key] || nodeData[key].type === 'static')}
+                        onChange={handleChange}
+                      />
+                      <span className="ml-2 text-sm text-[var(--color-textSecondary)]">Static Value</span>
+                    </label>
+                    <label className="inline-flex items-center">
+                      <input
+                        type="radio"
+                        className="form-radio text-[var(--color-primary)]"
+                        name={`${key}_sourceType`}
+                        value="shared"
+                        checked={nodeData[key]?.type === 'shared'}
+                        onChange={handleChange}
+                      />
+                      <span className="ml-2 text-sm text-[var(--color-textSecondary)]">From Shared State</span>
+                    </label>
+                  </div>
+                  {(!nodeData[key] || nodeData[key].type === 'static') && (
+                    <textarea
+                      id={`${key}_staticValue`}
+                      name={`${key}_staticValue`}
+                      value={nodeData[key]?.value || ''}
+                      onChange={handleChange}
+                      placeholder={config.placeholder || ''}
+                      rows={config.rows || 3}
+                      className="w-full p-2.5 border border-[var(--color-border)] rounded-md bg-[var(--color-background)] text-[var(--color-text)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent transition-all duration-200"
+                    />
+                  )}
+                  {nodeData[key]?.type === 'shared' && (
+                    <input
+                      type="text"
+                      id={`${key}_sharedKey`}
+                      name={`${key}_sharedKey`}
+                      value={nodeData[key]?.value || ''}
+                      onChange={handleChange}
+                      placeholder="e.g., my_data.result or apiResponse.body"
+                      className="w-full p-2.5 border border-[var(--color-border)] rounded-md bg-[var(--color-background)] text-[var(--color-text)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent transition-all duration-200"
+                    />
+                  )}
+                </div>
               )}
               {config.type === 'boolean' && (
                 <input
@@ -269,6 +441,21 @@ const NodeConfigModal = ({ node, onConfigChange, onClose, onDeleteNode }) => {
             </pre>
           </div>
         )}
+
+        {/* Output to Shared Configuration */}
+        <div className="mt-6 pt-4 border-t border-[var(--color-border)]">
+          <h3 className="text-lg font-bold mb-2 text-[var(--color-text)]">Output to Shared State</h3>
+          <p className="text-sm text-[var(--color-textSecondary)] mb-3">Specify a key to store this node's output in the shared state.</p>
+          <input
+            type="text"
+            id="outputToSharedKey"
+            name="outputToSharedKey"
+            value={nodeData.outputToSharedKey || ''}
+            onChange={handleChange}
+            placeholder="e.g., my_node_output"
+            className="w-full p-2.5 border border-[var(--color-border)] rounded-md bg-[var(--color-background)] text-[var(--color-text)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent transition-all duration-200"
+          />
+        </div>
       </div>
 
       <ConfirmationDialog

@@ -10,6 +10,7 @@ app.use(json());
 
 app.post('/run', async (req, res) => {
   const { nodes, edges } = req.body;
+  console.log('Backend received nodes:', nodes); // THIS WILL APPEAR IN BACKEND TERMINAL
   try {
     const result = await executeWorkflow(nodes, edges);
     res.json(result); // executeWorkflow now returns { success, result/error }

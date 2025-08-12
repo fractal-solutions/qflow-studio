@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import ReactFlow, {
   MiniMap,
   Controls,
@@ -24,7 +24,7 @@ const initialNodes = [
       border: '2px solid var(--color-success)',
       borderRadius: '12px',
       padding: '10px',
-      fontSize: '14px',
+      fontSize: '9px',
       fontWeight: '500',
     },
   },
@@ -42,6 +42,18 @@ function WorkflowBuilder({ onNodeSelected, onNodeConfigChange }) {
   const reactFlowWrapper = useRef(null);
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+  const nodesRef = useRef(nodes);
+  const edgesRef = useRef(edges);
+
+  // Update refs whenever nodes or edges state changes
+  useEffect(() => {
+    nodesRef.current = nodes;
+  }, [nodes]);
+
+  useEffect(() => {
+    edgesRef.current = edges;
+  }, [edges]);
+
   const [reactFlowInstance, setReactFlowInstance] = useState(null);
   const [isRunning, setIsRunning] = useState(false);
   const [showModal, setShowModal] = useState(false);
@@ -76,14 +88,20 @@ function WorkflowBuilder({ onNodeSelected, onNodeConfigChange }) {
         id: getId(),
         type,
         position,
-        data: { label: `${type}` },
+        data: {
+          label: `${type}`,
+          // Initialize with default values for common parameters
+          // This helps ensure the data structure is preserved by React Flow
+          ...(type === 'SharedStateWriterNode' && { key: '', value: '' }),
+          ...(type === 'SharedStateReaderNode' && { sharedKey: '' }),
+        },
         style: {
             background: 'var(--color-primary)',
             color: 'white',
             border: '2px solid var(--color-primary)',
             borderRadius: '12px',
             padding: '10px',
-            fontSize: '14px',
+            fontSize: '9px',
             fontWeight: '500',
           },
       };
@@ -95,24 +113,53 @@ function WorkflowBuilder({ onNodeSelected, onNodeConfigChange }) {
 
 
   const onSave = useCallback(() => {
+    // Get the latest nodes and edges directly from the React Flow instance
+    const currentNodes = reactFlowInstance.getNodes();
+    const currentEdges = reactFlowInstance.getEdges();
+
     const flowData = {
-      nodes,
-      edges,
+      nodes: currentNodes,
+      edges: currentEdges,
       timestamp: new Date().toISOString(),
     };
     console.log('Saving workflow:', JSON.stringify(flowData, null, 2));
     alert('Workflow saved! Check console for JSON output.');
-  }, [nodes, edges]);
+  }, [reactFlowInstance]); // Depend on reactFlowInstance
 
   const onRun = useCallback(async () => {
     setIsRunning(true);
     try {
+      // Get the latest nodes and edges directly from the React Flow instance
+      const currentNodes = reactFlowInstance.getNodes();
+      const currentEdges = reactFlowInstance.getEdges();
+
+      // Transform GISNode data before sending to backend
+      const transformedNodes = currentNodes.map(node => {
+        if (node.type === 'GISNode') {
+          const newData = { ...node.data };
+          newData.params = {}; // Initialize params object
+          if (newData.operation === 'geocode' && newData.address) {
+            newData.params.address = newData.address;
+            delete newData.address;
+          } else if (newData.operation === 'reverse_geocode' && newData.latitude && newData.longitude) {
+            newData.params.lat = newData.latitude;
+            newData.params.lng = newData.longitude;
+            delete newData.latitude;
+            delete newData.longitude;
+          }
+          return { ...node, data: newData };
+        }
+        return node;
+      });
+
+      console.log('Frontend sending nodes:', transformedNodes); // THIS WILL APPEAR IN BROWSER CONSOLE
+
       const response = await fetch('http://localhost:3000/run', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ nodes, edges }),
+        body: JSON.stringify({ nodes: transformedNodes, edges: currentEdges }),
       });
       const data = await response.json();
       if (data.success) {
@@ -122,9 +169,10 @@ function WorkflowBuilder({ onNodeSelected, onNodeConfigChange }) {
       }
     } catch (error) {
       alert(`Error running workflow: ${error.message}`);
+    } finally {
+      setIsRunning(false);
     }
-    setIsRunning(false);
-  }, [nodes, edges]);
+  }, [reactFlowInstance]); // Depend on reactFlowInstance
 
   const handleNodeClick = (event, node) => {
     setNodeToConfigure(node);
@@ -135,12 +183,19 @@ function WorkflowBuilder({ onNodeSelected, onNodeConfigChange }) {
     setNodes((nds) =>
       nds.map((node) => {
         if (node.id === nodeId) {
-          node.data = data;
+          // Create a new node object with the updated data
+          return {
+            ...node,
+            data: { ...data } // Deep copy the data object
+          };
         }
         return node;
       })
     );
-    onNodeConfigChange(nodeId, data); // Keep this for App.jsx if it still needs to know
+    // The onNodeConfigChange prop from App.jsx is not strictly needed here for data flow
+    // but can be kept if App.jsx needs to react to node config changes for other reasons.
+    // For now, we'll remove it as it's not used for data propagation.
+    // onNodeConfigChange(nodeId, data);
   };
 
   const onCloseModal = () => {

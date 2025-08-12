@@ -19,6 +19,8 @@ const coreNodes = [
     { name: 'IteratorNode', icon: <Share2 className="w-5 h-5 mr-3" />, description: 'Iterate over items' },
     { name: 'SubFlowNode', icon: <GitMerge className="w-5 h-5 mr-3" />, description: 'Run a subflow' },
     { name: 'SchedulerNode', icon: <Sliders className="w-5 h-5 mr-3" />, description: 'Schedule a flow' },
+    { name: 'SharedStateReaderNode', icon: <Share2 className="w-5 h-5 mr-3" />, description: 'Read from shared state' },
+    { name: 'SharedStateWriterNode', icon: <Share2 className="w-5 h-5 mr-3" />, description: 'Write to shared state' },
 ];
 
 const integratedNodes = {

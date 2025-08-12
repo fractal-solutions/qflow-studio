@@ -260,7 +260,7 @@ const nodeConfigSchemas = {
     state: { type: 'select', label: 'State', options: ['open', 'closed'] },
   },
   GISNode: {
-    action: { type: 'select', label: 'Action', options: ['geocode', 'reverse_geocode'] },
+    operation: { type: 'select', label: 'Operation', options: ['geocode', 'reverse_geocode'] },
     address: { type: 'text', label: 'Address (for geocode)' },
     latitude: { type: 'number', label: 'Latitude (for reverse_geocode)' },
     longitude: { type: 'number', label: 'Longitude (for reverse_geocode)' },
@@ -327,6 +327,13 @@ const nodeConfigSchemas = {
   HackerNewsNode: {
     action: { type: 'select', label: 'Action', options: ['get_top_stories', 'get_item'] },
     itemId: { type: 'number', label: 'Item ID' },
+  },
+  SharedStateReaderNode: {
+    sharedKey: { type: 'text', label: 'Shared Key to Read' },
+  },
+  SharedStateWriterNode: {
+    key: { type: 'text', label: 'Key to Write' },
+    value: { type: 'text', label: 'Value to Write' },
   },
 };
 
