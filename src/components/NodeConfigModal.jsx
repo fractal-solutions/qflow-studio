@@ -243,28 +243,28 @@ const NodeConfigModal = ({ node, onConfigChange, onClose, onDeleteNode }) => {
             <div className="flex items-left flex-col">
               <button
                 onClick={handleSave}
-                className="p-2 rounded-md text-[var(--color-primary)] hover:bg-[var(--color-primary)]/10 hover:text-[var(--color-primaryHover)] transition-colors flex items-center space-x-1 group"
+                className="p-[1px] rounded-md text-[var(--color-primary)] hover:bg-[var(--color-primary)]/10 hover:text-[var(--color-primaryHover)] transition-colors flex items-center space-x-1 group"
                 aria-label="Save"
               >
                 <Save className="w-4 h-4" />
-                <span className="text-xs font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-200">Save</span>
+                <span className="text-xs font-medium opacity-30 group-hover:opacity-100 transition-opacity duration-200">Save</span>
               </button>
               <button
                 onClick={handleDeleteClick}
-                className="p-2 rounded-md text-[var(--color-error)] hover:bg-[var(--color-error)]/10 hover:text-[var(--color-error)] transition-colors flex items-center space-x-1 group"
+                className="p-[1px] rounded-md text-[var(--color-error)] hover:bg-[var(--color-error)]/10 hover:text-[var(--color-error)] transition-colors flex items-center space-x-1 group"
                 aria-label="Delete Node"
               >
                 <Trash2 className="w-4 h-4" />
-                <span className="text-xs font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-200">Delete</span>
+                <span className="text-xs font-medium opacity-30 group-hover:opacity-100 transition-opacity duration-200">Delete</span>
               </button>
               <button
                 onClick={handleExecuteNode}
-                className={`p-2 rounded-md text-[var(--color-secondary)] hover:bg-[var(--color-secondary)]/10 hover:text-[var(--color-secondary)] transition-colors flex items-center space-x-1 group ${isExecuting ? 'opacity-50 cursor-not-allowed' : ''}`}
+                className={`p-[1px] rounded-md text-orange hover:bg-[var(--color-success)]/10 hover:text-[var(--color-success)] transition-colors flex items-center space-x-1 group ${isExecuting ? 'opacity-50 cursor-not-allowed' : ''}`}
                 aria-label="Execute Node"
                 disabled={isExecuting}
               >
                 {isExecuting ? <span className="animate-spin">⚙️</span> : <Play className="w-4 h-4" />}
-                <span className="text-xs font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-200">{isExecuting ? 'Executing...' : 'Execute'}</span>
+                <span className="text-xs font-medium opacity-30 group-hover:opacity-100 transition-opacity duration-200">{isExecuting ? 'Executing...' : 'Execute'}</span>
               </button>
             </div>
           </div>
