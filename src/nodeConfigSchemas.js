@@ -199,7 +199,7 @@ const nodeConfigSchemas = {
     action: { type: 'select', label: 'Action', options: ['connect', 'send', 'receive', 'close'] },
   },
   WebHookNode: {
-    port: { type: 'number', label: 'Port', defaultValue: 3000 },
+    port: { type: 'number', label: 'Port', defaultValue: 5666 },
     path: { type: 'text', label: 'Path', defaultValue: '/webhook' },
     sharedSecret: { type: 'text', label: 'Shared Secret' },
     responseStatus: { type: 'number', label: 'Response Status', defaultValue: 200 },

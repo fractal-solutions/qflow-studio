@@ -2,6 +2,7 @@ import { Node, Flow, AsyncNode, AsyncFlow, AsyncBatchNode, AsyncParallelBatchNod
 import { AgentNode, EmbeddingNode, SemanticMemoryNode, MemoryNode, TransformNode, CodeInterpreterNode, UserInputNode, InteractiveInputNode, IteratorNode, SubFlowNode, SchedulerNode, ReadFileNode, WriteFileNode, ShellCommandNode, HttpRequestNode, DeepSeekLLMNode, AgentDeepSeekLLMNode, OpenAILLMNode, AgentOpenAILLMNode, GeminiLLMNode, OllamaLLMNode, AgentOllamaLLMNode, HuggingFaceLLMNode, AgentHuggingFaceLLMNode, OpenRouterLLMNode, AgentOpenRouterLLMNode, DuckDuckGoSearchNode, GoogleSearchNode, ScrapeURLNode, BrowserControlNode, WebHookNode, AppendFileNode, ListDirectoryNode, DataExtractorNode, PDFProcessorNode, SpreadsheetNode, DataValidationNode, GISNode, DisplayImageNode, ImageGalleryNode, HardwareInteractionNode, SpeechSynthesisNode, MultimediaProcessingNode, RemoteExecutionNode, SystemNotificationNode } from '@fractal-solutions/qflow/nodes';
 import { SharedStateReaderNode } from './src/qflowNodes/SharedStateReaderNode.js';
 import { SharedStateWriterNode } from './src/qflowNodes/SharedStateWriterNode.js';
+import { registerWebhook } from './webhookRegistry.js';
 
 
 // Helper function to get a nested property from an object
@@ -296,6 +297,7 @@ export const executeWorkflow = async (nodes, edges) => {
     try {
       // The execAsync of the WebHookNode will start the listener.
       await webhookNodeInstance.execAsync({});
+      registerWebhook(webhookNodeEntry.id, webhookNodeInstance.server);
       const { port, path } = webhookNodeInstance.params;
       return { success: true, result: `Webhook listener started at http://localhost:${port}${path}`, isWebhookFlow: true, activeWebhookNodeId: webhookNodeEntry.id };
     } catch (error) {

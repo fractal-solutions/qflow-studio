@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import nodeConfigSchemas from '../nodeConfigSchemas';
-import { Save, X, Trash2, FileText, Terminal, Globe, BrainCircuit, Cpu, Database, Share2, GitMerge, Bot, MessageSquare, Sliders, Code, Search, File, Image, CreditCard, Rss, HardDrive, Server, GitBranch, ChevronsLeft, ChevronsRight, ChevronDown, ChevronUp, Play } from 'lucide-react'; // Import all necessary icons
+import { Save, Pause, X, Trash2, FileText, Terminal, Globe, BrainCircuit, Cpu, Database, Share2, GitMerge, Bot, MessageSquare, Sliders, Code, Search, File, Image, CreditCard, Rss, HardDrive, Server, GitBranch, ChevronsLeft, ChevronsRight, ChevronDown, ChevronUp, Play } from 'lucide-react'; // Import all necessary icons
 import ConfirmationDialog from './ConfirmationDialog'; // Import ConfirmationDialog
 
 // Map node types to their corresponding Lucide icons
@@ -64,7 +64,7 @@ export const nodeIcons = {
 };
 
 
-const NodeConfigModal = ({ node, onConfigChange, onClose, onDeleteNode }) => {
+const NodeConfigModal = ({ node, onConfigChange, onClose, onDeleteNode, activeWebhookNodeId, onStopWebhook }) => {
   const [nodeData, setNodeData] = useState(node.data);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [isExecuting, setIsExecuting] = useState(false);
@@ -102,7 +102,7 @@ const NodeConfigModal = ({ node, onConfigChange, onClose, onDeleteNode }) => {
     // This prevents errors when accessing .type on undefined
     if (schema) { // Ensure schema exists for the node type
       Object.entries(schema).forEach(([key, config]) => {
-        if ((config.type === 'text' || config.type === 'textarea' || config.type === 'number') &&
+        if ((config.type === 'text' || config.type === 'textarea') &&
             (displayNodeData[key] === undefined || typeof displayNodeData[key] !== 'object' || displayNodeData[key].type === undefined)) {
           displayNodeData[key] = { type: 'static', value: displayNodeData[key] || '' };
         }
@@ -156,7 +156,7 @@ const NodeConfigModal = ({ node, onConfigChange, onClose, onDeleteNode }) => {
         // For other types (number, select, json, boolean directly)
         return {
           ...prevData,
-          [name]: newParamValue
+          [name]: type === 'number' ? Number(newParamValue) : newParamValue
         };
       }
     });
@@ -193,6 +193,11 @@ const NodeConfigModal = ({ node, onConfigChange, onClose, onDeleteNode }) => {
 
   const handleCancelDelete = () => {
     setShowConfirmDialog(false);
+  };
+
+  const onStopWebhookFromModal = () => {
+    onStopWebhook(node.id); // Call the passed-in stop function
+    onClose(); // Close the modal
   };
 
   const handleExecuteNode = async () => {
@@ -266,6 +271,16 @@ const NodeConfigModal = ({ node, onConfigChange, onClose, onDeleteNode }) => {
                 {isExecuting ? <span className="animate-spin">⚙️</span> : <Play className="w-4 h-4" />}
                 <span className="text-xs font-medium opacity-30 group-hover:opacity-100 transition-opacity duration-200">{isExecuting ? 'Executing...' : 'Execute'}</span>
               </button>
+              {node.type === 'WebHookNode' && node.id === activeWebhookNodeId && (
+                <button
+                  onClick={onStopWebhookFromModal}
+                  className="p-[1px] rounded-md text-[var(--color-warning)] hover:bg-[var(--color-warning)]/10 hover:text-[var(--color-warning)] transition-colors flex items-center space-x-1 group"
+                  aria-label="Stop Webhook"
+                >
+                  <Pause className="w-4 h-4" />
+                  <span className="text-xs font-medium opacity-30 group-hover:opacity-100 transition-opacity duration-200">Stop Webhook</span>
+                </button>
+              )}
             </div>
           </div>
           <div className="flex flex-col items-center flex-grow -mt-2"> {/* Adjust margin-top to align with buttons */}

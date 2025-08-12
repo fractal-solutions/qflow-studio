@@ -1,6 +1,7 @@
 import express, { json } from 'express';
 import cors from 'cors';
 import { executeWorkflow, executeSingleNode } from './workflowExecutor.cjs';
+import { stopWebhook } from './webhookRegistry.js';
 
 const app = express();
 const port = 3000;
@@ -24,6 +25,19 @@ app.post('/execute-node', async (req, res) => {
   try {
     const result = await executeSingleNode(nodeData);
     res.json(result);
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.post('/stop-webhook', async (req, res) => {
+  const { webhookId } = req.body;
+  if (!webhookId) {
+    return res.status(400).json({ success: false, error: 'webhookId is required.' });
+  }
+  try {
+    await stopWebhook(webhookId);
+    res.json({ success: true, message: `Webhook ${webhookId} stopped successfully.` });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }

@@ -44,6 +44,12 @@ const initialEdges = [];
 let id = 2;
 const getId = () => `${id++}`;
 
+const generateRandomPort = () => {
+  const minPort = 49152; //IANA registered ephemeral port range
+  const maxPort = 65535;
+  return Math.floor(Math.random() * (maxPort - minPort + 1)) + minPort;
+};
+
 import NodeConfigModal, { nodeIcons } from './components/NodeConfigModal.jsx';
 
 function WorkflowBuilder({ onNodeSelected, onNodeConfigChange }) {
@@ -76,6 +82,7 @@ function WorkflowBuilder({ onNodeSelected, onNodeConfigChange }) {
 
   const [reactFlowInstance, setReactFlowInstance] = useState(null);
   const [isRunning, setIsRunning] = useState(false);
+  const [activeWebhookNodeId, setActiveWebhookNodeId] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [nodeToConfigure, setNodeToConfigure] = useState(null);
 
@@ -119,6 +126,7 @@ function WorkflowBuilder({ onNodeSelected, onNodeConfigChange }) {
           // This helps ensure the data structure is preserved by React Flow
           ...(type === 'SharedStateWriterNode' && { key: '', value: '' }),
           ...(type === 'SharedStateReaderNode' && { sharedKey: '' }),
+          ...(type === 'WebHookNode' && { port: generateRandomPort() }), // Assign random port for WebHookNode
         },
         style: {
             background: 'var(--color-primary)',
@@ -311,6 +319,7 @@ function WorkflowBuilder({ onNodeSelected, onNodeConfigChange }) {
               return node;
             })
           );
+          setActiveWebhookNodeId(data.activeWebhookNodeId);
         } else {
           showAlert('Success', 'Workflow finished successfully!', 'success');
         }
@@ -323,6 +332,49 @@ function WorkflowBuilder({ onNodeSelected, onNodeConfigChange }) {
       setIsRunning(false);
     }
   }, [reactFlowInstance]); // Depend on reactFlowInstance
+
+  const onStopWebhook = useCallback(async () => {
+    if (!activeWebhookNodeId) return; // Should not happen if button is correctly conditional
+
+    setIsRunning(true); // Indicate that an operation is in progress
+    try {
+      const response = await fetch('http://localhost:3000/stop-webhook', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ webhookId: activeWebhookNodeId }),
+      });
+      const data = await response.json();
+
+      if (data.success) {
+        showAlert('Success', data.message, 'success');
+        // Reset the style of the stopped webhook node
+        setNodes((nds) =>
+          nds.map((node) => {
+            if (node.id === activeWebhookNodeId) {
+              return {
+                ...node,
+                style: {
+                  ...node.style,
+                  border: '2px solid var(--color-primary)', // Reset to default border
+                  boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)', // Reset to default shadow
+                },
+              };
+            }
+            return node;
+          })
+        );
+        setActiveWebhookNodeId(null); // Clear the active webhook ID
+      } else {
+        showAlert('Error', `Failed to stop webhook: ${data.error}`, 'error');
+      }
+    } catch (error) {
+      showAlert('Error', `Error stopping webhook: ${error.message}`, 'error');
+    } finally {
+      setIsRunning(false);
+    }
+  }, [activeWebhookNodeId, setNodes, showAlert]); // Dependencies
 
   const handleNodeClick = (event, node) => {
     setNodeToConfigure(node);
@@ -372,7 +424,7 @@ function WorkflowBuilder({ onNodeSelected, onNodeConfigChange }) {
           <button
             onClick={onRun}
             className={`flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition-colors ${
-              isRunning
+              isRunning && !activeWebhookNodeId // If running and not a webhook, or if it's a webhook and not active
                 ? 'bg-[var(--color-error)]/10 text-[var(--color-error)] hover:bg-[var(--color-error)]/20 border border-[var(--color-error)]/20'
                 : 'bg-[var(--color-success)]/10 text-[var(--color-success)] hover:bg-[var(--color-success)]/20 border border-[var(--color-success)]/20'
             }`}
@@ -380,6 +432,19 @@ function WorkflowBuilder({ onNodeSelected, onNodeConfigChange }) {
             {isRunning ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
             <span>{isRunning ? 'Stop' : 'Run'}</span>
           </button>
+          {activeWebhookNodeId && ( // Conditionally render stop button for active webhook
+            <button
+              onClick={onStopWebhook}
+              className={`flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition-colors ${
+                isRunning
+                  ? 'bg-[var(--color-error)]/10 text-[var(--color-error)] hover:bg-[var(--color-error)]/20 border border-[var(--color-error)]/20'
+                  : 'bg-[var(--color-error)]/10 text-[var(--color-error)] hover:bg-[var(--color-error)]/20 border border-[var(--color-error)]/20'
+              }`}
+            >
+              <Pause className="w-4 h-4" />
+              <span>Stop Webhook</span>
+            </button>
+          )}
           <button
             onClick={onSave}
             className="flex items-center space-x-2 px-4 py-2 bg-[var(--color-primary)] text-white rounded-lg hover:bg-[var(--color-primaryHover)] transition-colors font-medium"
@@ -470,6 +535,8 @@ function WorkflowBuilder({ onNodeSelected, onNodeConfigChange }) {
           onConfigChange={handleNodeConfigChange}
           onClose={onCloseModal}
           onDeleteNode={handleDeleteNode} // Pass the new delete handler
+          activeWebhookNodeId={activeWebhookNodeId} // Pass active webhook ID
+          onStopWebhook={onStopWebhook} // Pass the stop webhook function
         />
       )}
       <AlertDialog
