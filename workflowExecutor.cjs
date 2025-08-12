@@ -2,6 +2,7 @@ import { Node, Flow, AsyncNode, AsyncFlow, AsyncBatchNode, AsyncParallelBatchNod
 import { AgentNode, EmbeddingNode, SemanticMemoryNode, MemoryNode, TransformNode, CodeInterpreterNode, UserInputNode, InteractiveInputNode, IteratorNode, SubFlowNode, SchedulerNode, ReadFileNode, WriteFileNode, ShellCommandNode, HttpRequestNode, DeepSeekLLMNode, AgentDeepSeekLLMNode, OpenAILLMNode, AgentOpenAILLMNode, GeminiLLMNode, OllamaLLMNode, AgentOllamaLLMNode, HuggingFaceLLMNode, AgentHuggingFaceLLMNode, OpenRouterLLMNode, AgentOpenRouterLLMNode, DuckDuckGoSearchNode, GoogleSearchNode, ScrapeURLNode, BrowserControlNode, WebHookNode, AppendFileNode, ListDirectoryNode, DataExtractorNode, PDFProcessorNode, SpreadsheetNode, DataValidationNode, GISNode, DisplayImageNode, ImageGalleryNode, HardwareInteractionNode, SpeechSynthesisNode, MultimediaProcessingNode, RemoteExecutionNode, SystemNotificationNode } from '@fractal-solutions/qflow/nodes';
 import { SharedStateReaderNode } from './src/qflowNodes/SharedStateReaderNode.js';
 import { SharedStateWriterNode } from './src/qflowNodes/SharedStateWriterNode.js';
+import { BranchNode } from './src/qflowNodes/BranchNode.js';
 import { registerWebhook } from './webhookRegistry.js';
 
 
@@ -121,6 +122,7 @@ const nodeMap = {
   SystemNotificationNode,
   SharedStateReaderNode,
   SharedStateWriterNode,
+  BranchNode,
 };
 
 export const executeWorkflow = async (nodes, edges) => {
@@ -129,27 +131,67 @@ export const executeWorkflow = async (nodes, edges) => {
     return { success: false, error: 'No nodes to execute.' };
   }
 
+  // Add this console.log block
+  nodes.forEach(node => {
+    if (node.type === 'BranchNode') {
+      console.log(`--- Debugging BranchNode Data ---`);
+      console.log(`BranchNode ${node.id} - node.data.branches type: ${typeof node.data.branches}`);
+      console.log(`BranchNode ${node.id} - node.data.branches value:`, node.data.branches);
+      console.log(`BranchNode ${node.id} - node.data.conditionValue type: ${typeof node.data.conditionValue}`);
+      console.log(`BranchNode ${node.id} - node.data.conditionValue value:`, node.data.conditionValue);
+      console.log(`--- End Debugging BranchNode Data ---`);
+    }
+  });
+
   const flowNodes = {};
-  const qflowNodes = nodes.filter(node => node.type !== 'input'); // Filter out React Flow's 'input' node
-  // Instantiate all qflow nodes
-  qflowNodes.forEach(node => {
+  // Instantiate all qflow nodes that are not of type 'input'
+  nodes.forEach(node => { // Iterate over all nodes, not just qflowNodes
+    if (node.type === 'input') {
+      // The 'input' node is a React Flow visual element, not a Qflow Node.
+      // We don't instantiate a Qflow Node for it, but its ID can be a source.
+      return;
+    }
+
     const NodeClass = nodeMap[node.type];
     if (NodeClass) {
       const flowNode = new NodeClass();
-      
+      flowNode.id = node.id;
+      flowNode.type = node.type;
       // Store original structured parameters for potential later use (e.g., saving back to UI)
       flowNode._originalParams = node.data;
 
-      // Resolve parameters for initial setParams (only static values)
+      // Resolve parameters for initial setParams
       const resolvedNodeData = {};
       for (const key in node.data) {
 		if (key === 'label') {
 			resolvedNodeData[key] = extractLabel(node.data[key]);
-		  } else {
-			resolvedNodeData[key] = resolveParameter(node.data[key], {}); // Pass an empty shared object
-		  }
+		} else {
+            const paramValue = node.data[key];
+            // If the parameter is a structured object from NodeConfigModal (type: 'static' or 'shared')
+            if (paramValue && typeof paramValue === 'object' && paramValue.type) {
+                if (paramValue.type === 'static') {
+                    resolvedNodeData[key] = paramValue.value; // Unwrap static value
+                } else if (paramValue.type === 'shared') {
+                    // For shared, we might need to resolve it later, or pass the structure
+                    // For now, let's pass the structure, and resolveNodeParameters will handle it.
+                    resolvedNodeData[key] = paramValue;
+                }
+            } else {
+                // If it's not a structured parameter (e.g., direct string, number, array)
+                resolvedNodeData[key] = paramValue;
+            }
+		}
       }
-      flowNode.setParams(resolvedNodeData);
+      flowNode.setParams(resolvedNodeData); // This will set flowNode.params = resolvedNodeData
+
+      // --- START OF BRANCHNODE SPECIFIC ASSIGNMENT ---
+      if (node.type === 'BranchNode') {
+        // These properties are now correctly unwrapped in resolvedNodeData
+        flowNode.conditionSource = resolvedNodeData.conditionSource;
+        flowNode.conditionValue = resolvedNodeData.conditionValue;
+        flowNode.branches = resolvedNodeData.branches;
+      }
+      // --- END OF BRANCHNODE SPECIFIC ASSIGNMENT ---
 
       // Store original prepAsync and prep methods
       const originalPrepAsync = flowNode.prepAsync;
@@ -269,15 +311,30 @@ export const executeWorkflow = async (nodes, edges) => {
   });
 
   // Connect qflow nodes based on edges
-  edges.forEach(edge => {
+  // Only iterate over edges where the source is an instantiated Qflow node
+  edges.filter(edge => flowNodes[edge.source]).forEach(edge => { // <--- NEW FILTER
     const sourceNode = flowNodes[edge.source];
-    const targetNode = flowNodes[edge.target];
-    if (sourceNode && targetNode) {
-      sourceNode.next(targetNode);
+    const targetNode = flowNodes[edge.target]; // targetNode might still be undefined if it's an output node
+
+    if (sourceNode && targetNode) { // Ensure targetNode is also instantiated
+      const branchName = edge.data && edge.data.branchName ? edge.data.branchName : 'default';
+      console.log(`Connecting: Source ${sourceNode.id} (type: ${sourceNode.type}) to Target ${targetNode.id} (type: ${targetNode.type}) with Branch: ${branchName}`);
+      sourceNode.next(targetNode, branchName);
+
+      // Manual population of _next for BranchNode
+      if (sourceNode.type === 'BranchNode') {
+        if (!sourceNode._next) {
+          sourceNode._next = {};
+        }
+        sourceNode._next[branchName] = targetNode;
+      }
+    } else {
+        // This warning should now only trigger if targetNode is undefined
+        console.warn(`Skipping connection for edge from ${edge.source} to ${edge.target}. Target node is not an instantiated Qflow node.`);
     }
   });
 
-  const webhookNodeEntry = qflowNodes.find(node => node.type === 'WebHookNode');
+  const webhookNodeEntry = nodes.find(node => node.type === 'WebHookNode');
 
   if (webhookNodeEntry) {
     const webhookNodeInstance = flowNodes[webhookNodeEntry.id];
@@ -309,11 +366,22 @@ export const executeWorkflow = async (nodes, edges) => {
     }
   }
 
-  // Find the actual qflow start node (a qflow node with no incoming edges from other qflow nodes)
-  const qflowNodeIds = qflowNodes.map(node => node.id);
-  const startNodeId = qflowNodeIds.find(nodeId => {
-    return !edges.some(edge => edge.target === nodeId && qflowNodeIds.includes(edge.source));
+  let startNodeId = null;
+  // Find the target of an edge originating from the React Flow 'input' node
+  const inputNodeEdge = edges.find(edge => {
+    const sourceReactFlowNode = nodes.find(n => n.id === edge.source);
+    return sourceReactFlowNode && sourceReactFlowNode.type === 'input';
   });
+
+  if (inputNodeEdge) {
+    startNodeId = inputNodeEdge.target;
+  } else {
+    // Fallback: if no edge from 'input' node, find a Qflow node with no incoming Qflow edges
+    const qflowNodeIds = Object.keys(flowNodes);
+    startNodeId = qflowNodeIds.find(nodeId => {
+      return !edges.some(edge => edge.target === nodeId && qflowNodeIds.includes(edge.source));
+    });
+  }
 
   if (!startNodeId) {
     console.error('Could not find a valid qflow start node.');
@@ -325,8 +393,28 @@ export const executeWorkflow = async (nodes, edges) => {
 
   try {
     console.log('Running workflow...');
-    const result = await flow.runAsync({});
+    let result = await flow.runAsync({});
     console.log('Workflow finished:', result);
+
+    // Check if the result is a branch name from a BranchNode
+    if (typeof result === 'string' && startNode.type === 'BranchNode') {
+      const branchNodeInstance = startNode; // Since startNode is the BranchNode
+      const chosenBranch = result;
+
+      if (branchNodeInstance._next && branchNodeInstance._next[chosenBranch]) {
+        const nextNodeToExecute = branchNodeInstance._next[chosenBranch];
+        console.log(`WorkflowExecutor: BranchNode returned '${chosenBranch}'. Executing next node: ${nextNodeToExecute.id} (${nextNodeToExecute.type})`);
+
+        // Now, execute the nextNodeToExecute
+        // Create a new AsyncFlow with this nextNodeToExecute as the startNode.
+        const subFlow = new AsyncFlow(nextNodeToExecute);
+        result = await subFlow.runAsync({}); // Run the rest of the flow from this node
+        console.log('Workflow continued from branch:', result);
+      } else {
+        console.warn(`WorkflowExecutor: BranchNode returned '${chosenBranch}', but no next node found for this branch.`);
+      }
+    }
+
     return { success: true, result, isWebhookFlow: false };
   } catch (error) {
     console.error('Workflow failed:', error);

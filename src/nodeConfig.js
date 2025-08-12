@@ -43,5 +43,13 @@ export const nodeConfig = {
     fields: [
         { name: 'label', type: 'text', label: 'Label' },
     ]
+  },
+  BranchNode: {
+    fields: [
+      { name: 'label', type: 'text', label: 'Label' },
+      { name: 'conditionSource', type: 'select', label: 'Condition Source', options: ['static', 'sharedState', 'expression'], defaultValue: 'static' },
+      { name: 'conditionValue', type: 'textarea', label: 'Condition Value/Key', placeholder: 'e.g., true, my_data.status, x > 5' },
+      { name: 'branches', type: 'json', label: 'Branches (JSON Array)', placeholder: '[{"value": "true", "label": "True Branch"}, {"value": "false", "label": "False Branch"}]' , defaultValue: '[{"value": "default", "label": "Default Branch"}]' },
+    ],
   }
 };

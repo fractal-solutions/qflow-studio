@@ -335,6 +335,11 @@ const nodeConfigSchemas = {
     key: { type: 'text', label: 'Key to Write' },
     value: { type: 'text', label: 'Value to Write' },
   },
+  BranchNode: {
+    conditionSource: { type: 'select', label: 'Condition Source', options: ['static', 'sharedState', 'expression'], defaultValue: 'static' },
+    conditionValue: { type: 'textarea', label: 'Condition Value/Key', placeholder: 'e.g., true, my_data.status, x > 5' },
+    branches: { type: 'json', label: 'Branches (JSON Array)', placeholder: '[{"value": "true", "label": "True Branch"}, {"value": "false", "label": "False Branch"}]' , defaultValue: '[{"value": "default", "label": "Default Branch"}]' },
+  },
 };
 
 export default nodeConfigSchemas;

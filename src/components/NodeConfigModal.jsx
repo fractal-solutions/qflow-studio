@@ -69,11 +69,15 @@ const NodeConfigModal = ({ node, onConfigChange, onClose, onDeleteNode, activeWe
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [isExecuting, setIsExecuting] = useState(false);
   const [executionResult, setExecutionResult] = useState(null);
+  const [jsonErrors, setJsonErrors] = useState({});
+  const [rawJsonInputs, setRawJsonInputs] = useState({}); // New state for raw JSON string inputs
   const schema = nodeConfigSchemas[node.type];
   const NodeIcon = nodeIcons[node.type] || Cpu; // Default to Cpu icon if not found
 
   useEffect(() => {
     let displayNodeData = { ...node.data };
+    const initialRawJsonInputs = {};
+
     // If it's a GISNode, flatten the 'params' object for display in the form
     if (node.type === 'GISNode') {
       // Handle address for GISNode
@@ -106,10 +110,31 @@ const NodeConfigModal = ({ node, onConfigChange, onClose, onDeleteNode, activeWe
             (displayNodeData[key] === undefined || typeof displayNodeData[key] !== 'object' || displayNodeData[key].type === undefined)) {
           displayNodeData[key] = { type: 'static', value: displayNodeData[key] || '' };
         }
+        // For JSON fields, initialize rawJsonInputs with stringified value
+        if (config.type === 'json') {
+          let jsonValueToDisplay = displayNodeData[key]?.value;
+          // If the value is a string, try to parse it first
+          if (typeof jsonValueToDisplay === 'string') {
+            try {
+              jsonValueToDisplay = JSON.parse(jsonValueToDisplay);
+            } catch (e) {
+              console.warn(`Could not parse stringified JSON for ${key} during display initialization. Using raw string.`, e);
+              // If parsing fails, keep it as a string, it will be validated on save
+            }
+          }
+          try {
+            initialRawJsonInputs[key] = JSON.stringify(jsonValueToDisplay || {}, null, 2);
+          } catch (e) {
+            console.error(`Error stringifying JSON for ${key}:`, e);
+            initialRawJsonInputs[key] = '{}'; // Fallback to empty object string
+          }
+        }
       });
     }
 
     setNodeData(displayNodeData);
+    setRawJsonInputs(initialRawJsonInputs); // Set raw JSON inputs
+    setJsonErrors({}); // Clear JSON errors on node change
     setExecutionResult(null); // Clear previous results when node changes
   }, [node.data, node.type, schema]); // Add schema to dependency array
 
@@ -164,6 +189,37 @@ const NodeConfigModal = ({ node, onConfigChange, onClose, onDeleteNode, activeWe
 
   const handleSave = () => {
     let dataToSave = { ...nodeData };
+    let hasJsonErrors = false;
+    const currentJsonErrors = {};
+
+    // Validate and parse JSON fields before saving
+    if (schema) {
+      Object.entries(schema).forEach(([key, config]) => {
+        if (config.type === 'json' && nodeData[key] && nodeData[key].type === 'static') { // Use nodeData for type check
+          const rawValue = rawJsonInputs[key]; // Get raw string from new state
+          try {
+            dataToSave[key].value = JSON.parse(rawValue); // Parse raw string
+            currentJsonErrors[key] = false;
+          } catch (error) {
+            console.error(`Invalid JSON for field ${key}:`, error);
+            console.log(`Problematic rawValue for ${key}:`, rawValue);
+            console.log(`Length of rawValue:`, rawValue.length);
+            
+            currentJsonErrors[key] = true;
+            hasJsonErrors = true;
+          }
+        }
+      });
+    }
+
+    setJsonErrors(currentJsonErrors); // Update the state with current errors
+
+    if (hasJsonErrors) {
+      // Prevent saving if there are JSON parsing errors
+      alert('Please correct invalid JSON inputs before saving.'); // Using alert for now
+      return;
+    }
+
     if (node.type === 'GISNode') {
       dataToSave.params = {};
       if (nodeData.operation === 'geocode' && nodeData.address) {
@@ -467,14 +523,10 @@ const NodeConfigModal = ({ node, onConfigChange, onClose, onDeleteNode, activeWe
                     <textarea
                       id={`${key}_staticValue`}
                       name={`${key}_staticValue`}
-                      value={JSON.stringify(nodeData[key]?.value || {}, null, 2)} // Ensure value is stringified JSON
+                      value={rawJsonInputs[key] || ''} // Use rawJsonInputs for display
                       onChange={(e) => {
-                        try {
-                          setNodeData(prevData => ({ ...prevData, [key]: { type: 'static', value: JSON.parse(e.target.value) } }));
-                        } catch (error) {
-                          console.error("Invalid JSON input:", error);
-                          // Optionally, set an error state or prevent update
-                        }
+                        setRawJsonInputs(prev => ({ ...prev, [key]: e.target.value })); // Update raw input
+                        setJsonErrors(prevErrors => ({ ...prevErrors, [key]: false })); // Clear error on typing
                       }}
                       rows={config.rows || 6}
                       className="w-full p-2.5 border border-[var(--color-border)] rounded-md bg-[var(--color-background)] text-[var(--color-text)] font-mono text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent transition-all duration-200"
@@ -490,6 +542,9 @@ const NodeConfigModal = ({ node, onConfigChange, onClose, onDeleteNode, activeWe
                       placeholder="e.g., my_data.result or apiResponse.body"
                       className="w-full p-2.5 border border-[var(--color-border)] rounded-md bg-[var(--color-background)] text-[var(--color-text)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent transition-all duration-200"
                     />
+                  )}
+                  {jsonErrors[key] && (
+                    <p className="text-red-500 text-sm mt-1">Invalid JSON format. Please correct it.</p>
                   )}
                 </div>
               )}

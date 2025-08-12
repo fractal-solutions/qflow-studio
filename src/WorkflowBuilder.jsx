@@ -51,6 +51,7 @@ const generateRandomPort = () => {
 };
 
 import NodeConfigModal, { nodeIcons } from './components/NodeConfigModal.jsx';
+import nodeConfigSchemas from './nodeConfigSchemas';
 
 function WorkflowBuilder({ onNodeSelected, onNodeConfigChange }) {
   const { theme } = useTheme();
@@ -87,8 +88,26 @@ function WorkflowBuilder({ onNodeSelected, onNodeConfigChange }) {
   const [nodeToConfigure, setNodeToConfigure] = useState(null);
 
   const onConnect = useCallback(
-    (params) => setEdges((eds) => addEdge({ ...params, animated: true, style: { stroke: 'var(--color-secondary)', strokeWidth: 2 } }, eds)),
-    [setEdges]
+    (params) => {
+      const sourceNode = nodes.find((node) => node.id === params.source);
+      let branchName = 'default'; // Default branch name
+
+      if (sourceNode && sourceNode.type === 'BranchNode') {
+        const promptedBranchName = prompt('Enter branch name (e.g., "success", "failure", "default"): ');
+        if (promptedBranchName === null) { // User cancelled
+          return;
+        }
+        branchName = promptedBranchName || 'default';
+      }
+
+      setEdges((eds) => addEdge({
+        ...params,
+        animated: true,
+        style: { stroke: 'var(--color-secondary)', strokeWidth: 2 },
+        data: { branchName: branchName }
+      }, eds));
+    },
+    [setEdges, nodes]
   );
 
   const onDragOver = useCallback((event) => {
@@ -127,6 +146,12 @@ function WorkflowBuilder({ onNodeSelected, onNodeConfigChange }) {
           ...(type === 'SharedStateWriterNode' && { key: '', value: '' }),
           ...(type === 'SharedStateReaderNode' && { sharedKey: '' }),
           ...(type === 'WebHookNode' && { port: generateRandomPort() }), // Assign random port for WebHookNode
+          // Initialize BranchNode specific data
+          ...(type === 'BranchNode' && {
+            conditionSource: nodeConfigSchemas.BranchNode.conditionSource.defaultValue,
+            conditionValue: nodeConfigSchemas.BranchNode.conditionValue.defaultValue,
+            branches: JSON.parse(nodeConfigSchemas.BranchNode.branches.defaultValue),
+          }),
         },
         style: {
             background: 'var(--color-primary)',
@@ -241,6 +266,16 @@ function WorkflowBuilder({ onNodeSelected, onNodeConfigChange }) {
 
           setNodes(transformedNodes);
           setEdges(importedFlow.edges);
+
+          // Find the maximum ID among the imported nodes
+          const maxId = importedFlow.nodes.reduce((max, node) => {
+            const nodeIdNum = parseInt(node.id, 10);
+            return isNaN(nodeIdNum) ? max : Math.max(max, nodeIdNum);
+          }, 0);
+
+          // Update the global 'id' counter
+          id = maxId + 1;
+
           showAlert('Success', 'Workflow imported successfully!', 'success'); 
         } else {
           showAlert('Error','Invalid workflow file: Missing nodes or edges data.');
