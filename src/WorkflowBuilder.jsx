@@ -52,6 +52,58 @@ const generateRandomPort = () => {
 
 import NodeConfigModal, { nodeIcons } from './components/NodeConfigModal.jsx';
 import nodeConfigSchemas from './nodeConfigSchemas';
+import CustomNode from './components/CustomNode.jsx';
+
+const nodeTypes = {
+  AgentNode: CustomNode,
+  EmbeddingNode: CustomNode,
+  SemanticMemoryNode: CustomNode,
+  MemoryNode: CustomNode,
+  TransformNode: CustomNode,
+  CodeInterpreterNode: CustomNode,
+  UserInputNode: CustomNode,
+  InteractiveInputNode: CustomNode,
+  IteratorNode: CustomNode,
+  SubFlowNode: CustomNode,
+  SchedulerNode: CustomNode,
+  ReadFileNode: CustomNode,
+  WriteFileNode: CustomNode,
+  ShellCommandNode: CustomNode,
+  HttpRequestNode: CustomNode,
+  DeepSeekLLMNode: CustomNode,
+  AgentDeepSeekLLMNode: CustomNode,
+  OpenAILLMNode: CustomNode,
+  AgentOpenAILLMNode: CustomNode,
+  GeminiLLMNode: CustomNode,
+  OllamaLLMNode: CustomNode,
+  AgentOllamaLLMNode: CustomNode,
+  HuggingFaceLLMNode: CustomNode,
+  AgentHuggingFaceLLMNode: CustomNode,
+  OpenRouterLLMNode: CustomNode,
+  AgentOpenRouterLLMNode: CustomNode,
+  DuckDuckGoSearchNode: CustomNode,
+  GoogleSearchNode: CustomNode,
+  ScrapeURLNode: CustomNode,
+  BrowserControlNode: CustomNode,
+  WebHookNode: CustomNode,
+  AppendFileNode: CustomNode,
+  ListDirectoryNode: CustomNode,
+  DataExtractorNode: CustomNode,
+  PDFProcessorNode: CustomNode,
+  SpreadsheetNode: CustomNode,
+  DataValidationNode: CustomNode,
+  GISNode: CustomNode,
+  DisplayImageNode: CustomNode,
+  ImageGalleryNode: CustomNode,
+  HardwareInteractionNode: CustomNode,
+  SpeechSynthesisNode: CustomNode,
+  MultimediaProcessingNode: CustomNode,
+  RemoteExecutionNode: CustomNode,
+  SystemNotificationNode: CustomNode,
+  SharedStateReaderNode: CustomNode,
+  SharedStateWriterNode: CustomNode,
+  BranchNode: CustomNode,
+};
 
 function WorkflowBuilder({ onNodeSelected, onNodeConfigChange }) {
   const { theme } = useTheme();
@@ -201,7 +253,7 @@ function WorkflowBuilder({ onNodeSelected, onNodeConfigChange }) {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `qflow-workflow-${Date.now()}.json`;
+    a.download = `qflow-workflow-${Date.now()}.qfw`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -505,7 +557,7 @@ function WorkflowBuilder({ onNodeSelected, onNodeConfigChange }) {
             type="file"
             id="import-workflow-input"
             style={{ display: 'none' }} // Hide the input
-            accept=".json"
+            accept=".qfw"
             onChange={onImport}
           />
         </div>
@@ -527,6 +579,7 @@ function WorkflowBuilder({ onNodeSelected, onNodeConfigChange }) {
                 <ReactFlow
                     nodes={nodes}
                     edges={edges}
+                    nodeTypes={nodeTypes}
                     onNodesChange={onNodesChange}
                     onEdgesChange={onEdgesChange}
                     onConnect={onConnect}

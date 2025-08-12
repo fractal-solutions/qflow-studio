@@ -28,6 +28,8 @@ export const themes = {
       text: '#f8fafc',
       textSecondary: '#cbd5e1',
       textMuted: '#94a3b8',
+      tertiary: '#4a5568',
+      tertiaryHover: '#2d3748',
     }
   },
   light: {
@@ -47,6 +49,8 @@ export const themes = {
       text: '#0f172a',
       textSecondary: '#475569',
       textMuted: '#64748b',
+      tertiary: '#4a5568',
+      tertiaryHover: '#2d3748',
     }
   },
   midnight: {
@@ -66,6 +70,8 @@ export const themes = {
       text: '#f8fafc',
       textSecondary: '#cbd5e1',
       textMuted: '#94a3b8',
+      tertiary: '#4a5568',
+      tertiaryHover: '#2d3748',
     }
   },
   forest: {
@@ -85,6 +91,8 @@ export const themes = {
       text: '#ecfdf5',
       textSecondary: '#a7f3d0',
       textMuted: '#6ee7b7',
+      tertiary: '#4a5568',
+      tertiaryHover: '#2d3748',
     }
   },
   sunset: {
@@ -104,6 +112,8 @@ export const themes = {
       text: '#fef7ff',
       textSecondary: '#fed7aa',
       textMuted: '#fdba74',
+      tertiary: '#4a5568',
+      tertiaryHover: '#2d3748',
     }
   },
   purple: {
@@ -123,6 +133,8 @@ export const themes = {
       text: '#faf5ff',
       textSecondary: '#e9d5ff',
       textMuted: '#d8b4fe',
+      tertiary: '#4a5568',
+      tertiaryHover: '#2d3748',
     }
   }
 };
