@@ -116,13 +116,10 @@ export const executeWorkflow = async (nodes, edges) => {
 
   const flowNodes = {};
   const qflowNodes = nodes.filter(node => node.type !== 'input'); // Filter out React Flow's 'input' node
-  const sharedKey = [];
   // Instantiate all qflow nodes
   qflowNodes.forEach(node => {
     const NodeClass = nodeMap[node.type];
     if (NodeClass) {
-      console.log('node---',node)
-      sharedKey.push({key: node.data.outputToSharedKey, nodeType: node.type})
       const flowNode = new NodeClass();
       
       // Store original structured parameters for potential later use (e.g., saving back to UI)
