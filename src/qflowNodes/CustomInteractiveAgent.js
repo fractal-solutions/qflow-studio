@@ -50,6 +50,39 @@ export class CustomInteractiveAgent extends AsyncNode {
         agentLLM.setParams({ apiKey, model, temperature });
 
         const availableTools = {};
+        // Map Node class names (from frontend) to their snake_case tool keys (for AgentNode)
+        const nodeClassToToolKeyMap = {
+            'DuckDuckGoSearchNode': 'duckduckgo_search',
+            'ShellCommandNode': 'shell_command',
+            'ReadFileNode': 'read_file',
+            'WriteFileNode': 'write_file',
+            'HttpRequestNode': 'http_request',
+            'ScrapeURLNode': 'web_scraper',
+            'InteractiveInputNode': 'interactive_input',
+            'SemanticMemoryNode': 'semantic_memory_node',
+            'TransformNode': 'transform_node',
+            'CodeInterpreterNode': 'code_interpreter',
+            'SubFlowNode': 'sub_flow',
+            'IteratorNode': 'iterator',
+            'SystemNotificationNode': 'system_notification',
+            'BrowserControlNode': 'browser_control',
+            'AppendFileNode': 'append_file',
+            'MemoryNode': 'memory_node',
+            'GoogleSearchNode': 'google_search',
+            'DataExtractorNode': 'data_extractor',
+            'PDFProcessorNode': 'pdf_processor',
+            'SpreadsheetNode': 'spreadsheet',
+            'DataValidationNode': 'data_validation',
+            'GISNode': 'gis',
+            'DisplayImageNode': 'display_image',
+            'ImageGalleryNode': 'image_gallery',
+            'HardwareInteractionNode': 'hardware_interaction',
+            'SpeechSynthesisNode': 'speech_synthesis',
+            'MultimediaProcessingNode': 'multimedia_processing',
+            'RemoteExecutionNode': 'remote_execution',
+        };
+
+        // The toolMap maps Node class names to actual Node classes
         const toolMap = {
             DuckDuckGoSearchNode: DuckDuckGoSearchNode,
             ShellCommandNode: ShellCommandNode,
@@ -57,7 +90,7 @@ export class CustomInteractiveAgent extends AsyncNode {
             WriteFileNode: WriteFileNode,
             HttpRequestNode: HttpRequestNode,
             ScrapeURLNode: ScrapeURLNode,
-            InteractiveInputNode: InteractiveInputNode, // Use InteractiveInputNode instead of UserInputNode
+            InteractiveInputNode: InteractiveInputNode,
             SemanticMemoryNode: SemanticMemoryNode,
             TransformNode: TransformNode,
             CodeInterpreterNode: CodeInterpreterNode,
@@ -84,8 +117,6 @@ export class CustomInteractiveAgent extends AsyncNode {
         if (tools && Array.isArray(tools)) {
             tools.forEach(toolName => {
                 if (toolMap[toolName]) {
-                    // Instantiate the tool and pass relevant parameters if needed
-                    // For now, assuming tools don't need specific parameters at instantiation
                     const toolInstance = new toolMap[toolName]();
                     
                     // Special handling for InteractiveInputNode to set default parameters
@@ -97,17 +128,14 @@ export class CustomInteractiveAgent extends AsyncNode {
                         });
                     }
                     
-                    // Map tool names to the expected format for agents
-                    let toolKey = toolName.replace('Node', '').toLowerCase();
+                    // Get the correct snake_case toolKey from the map
+                    const toolKey = nodeClassToToolKeyMap[toolName];
                     
-                    // Special handling for InteractiveInputNode to use underscore format
-                    if (toolName === 'InteractiveInputNode') {
-                        toolKey = 'interactive_input';
-                    } else if (toolName === 'SystemNotificationNode') {
-                        toolKey = 'system_notification';
+                    if (toolKey) {
+                        availableTools[toolKey] = toolInstance;
+                    } else {
+                        console.warn(`No snake_case mapping found for tool: ${toolName}`);
                     }
-                    
-                    availableTools[toolKey] = toolInstance;
                 } else {
                     console.warn(`Tool ${toolName} not found or supported.`);
                 }

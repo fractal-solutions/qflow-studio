@@ -357,7 +357,15 @@ const nodeConfigSchemas = {
     baseUrl: { type: 'text', label: 'Base URL' },
     systemPrompt: { type: 'textarea', label: 'Agent System Prompt' },
     goal: { type: 'textarea', label: 'Agent Goal' },
-    tools: { type: 'json', label: 'Available Tools (JSON Array of Node Names)' },
+    tools: { type: 'checkbox_list', label: 'Available Tools (JSON Array of Node Names)', options: [
+        'DuckDuckGoSearchNode', 'ShellCommandNode', 'ReadFileNode', 'WriteFileNode', 'HttpRequestNode',
+        'ScrapeURLNode', 'UserInputNode', 'SemanticMemoryNode', 'TransformNode', 'CodeInterpreterNode',
+        'SubFlowNode', 'IteratorNode', 'InteractiveInputNode', 'SystemNotificationNode', 'BrowserControlNode',
+        'AppendFileNode', 'MemoryNode', 'GoogleSearchNode', 'WebSocketsNode', 'DataExtractorNode',
+        'PDFProcessorNode', 'SpreadsheetNode', 'DataValidationNode', 'GitNode', 'GitHubNode', 'GISNode',
+        'DisplayImageNode', 'ImageGalleryNode', 'HardwareInteractionNode', 'SpeechSynthesisNode',
+        'MultimediaProcessingNode', 'RemoteExecutionNode', 'StripeNode', 'HackerNewsNode'
+      ] },
     maxIterations: { type: 'number', label: 'Max Iterations', defaultValue: 10 },
     temperature: { type: 'number', label: 'Temperature', defaultValue: 0.7 },
   },
@@ -372,10 +380,18 @@ const nodeConfigSchemas = {
       placeholder: 'You are Q, an autonomous agent. Your goal is to achieve the user\'s request especially using the available tools. Available Tools: {tools} You MUST respond with a single JSON object containing "thought" and "tool_calls". Example: {"thought": "I need to ask for user input", "tool_calls": [{"tool": "interactive_input", "parameters": {"prompt": "What is your name?"}}]}. When done, use {"thought": "Task complete", "final_output": "Summary of what was accomplished"}.'
     },
     goal: { type: 'textarea', label: 'Agent Goal' },
-    tools: { type: 'json', label: 'Available Tools (JSON Array of Node Names)' },
+    tools: { type: 'checkbox_list', label: 'Available Tools (JSON Array of Node Names)', options: [
+        'DuckDuckGoSearchNode', 'ShellCommandNode', 'ReadFileNode', 'WriteFileNode', 'HttpRequestNode',
+        'ScrapeURLNode', 'InteractiveInputNode', 'SemanticMemoryNode', 'TransformNode', 'CodeInterpreterNode',
+        'SubFlowNode', 'IteratorNode', 'SystemNotificationNode', 'BrowserControlNode',
+        'AppendFileNode', 'MemoryNode', 'GoogleSearchNode', 'WebSocketsNode', 'DataExtractorNode',
+        'PDFProcessorNode', 'SpreadsheetNode', 'DataValidationNode', 'GitNode', 'GitHubNode', 'GISNode',
+        'DisplayImageNode', 'ImageGalleryNode', 'HardwareInteractionNode', 'SpeechSynthesisNode',
+        'MultimediaProcessingNode', 'RemoteExecutionNode', 'StripeNode', 'HackerNewsNode'
+      ] },
     maxIterations: { type: 'number', label: 'Max Iterations', defaultValue: 10 },
     temperature: { type: 'number', label: 'Temperature', defaultValue: 0.7 },
-  },
+  }
 };
 
 export default nodeConfigSchemas;

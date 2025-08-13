@@ -680,6 +680,33 @@ const NodeConfigModal = ({ node, onConfigChange, onClose, onDeleteNode, activeWe
                   ))}
                 </select>
               )}
+              {config.type === 'checkbox_list' && (
+                <div className="space-y-2">
+                  {config.options.map(option => (
+                    <label key={option} className="flex items-center space-x-2 text-[var(--color-text)]">
+                      <input
+                        type="checkbox"
+                        name={key}
+                        value={option}
+                        checked={nodeData[key]?.includes(option) || false}
+                        onChange={(e) => {
+                          const { value, checked } = e.target;
+                          setNodeData(prevData => {
+                            const currentSelection = prevData[key] || [];
+                            if (checked) {
+                              return { ...prevData, [key]: [...currentSelection, value] };
+                            } else {
+                              return { ...prevData, [key]: currentSelection.filter(item => item !== value) };
+                            }
+                          });
+                        }}
+                        className="h-4 w-4 text-[var(--color-primary)] border-[var(--color-border)] rounded focus:ring-[var(--color-primary)]"
+                      />
+                      <span>{option}</span>
+                    </label>
+                  ))}
+                </div>
+              )}
               {config.type === 'json' && (
                 <>
                   {node.type === 'CustomLLMNode' && key === 'requestBody' ? (
