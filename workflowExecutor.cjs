@@ -433,6 +433,10 @@ export const executeWorkflow = async (nodes, edges, clients, workflowId) => {
     return { success: false, error: error.message, workflowId };
   } finally {
     activeWorkflows.delete(workflowId);
+    if (clients && clients.has(workflowId)) {
+      clients.get(workflowId).close();
+      console.log(`WorkflowExecutor: Closed WebSocket for workflow ${workflowId}`);
+    }
   }
 };
 
