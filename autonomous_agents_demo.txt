@@ -1,0 +1,8 @@
+Autonomous AI Agent Demonstration File
+
+Key characteristics of autonomous agents:
+1. Self-directed operation
+2. Goal-oriented behavior
+3. Ability to learn and adapt
+4. Tool utilization capabilities
+5. Memory and context retention

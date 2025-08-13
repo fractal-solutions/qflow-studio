@@ -19,19 +19,24 @@ const wss = new WebSocketServer({ server });
 const clients = new Map();
 
 wss.on('connection', (ws) => {
+  console.log('Backend: WebSocket client connected.');
   ws.on('message', (message) => {
     const data = JSON.parse(message);
+    console.log('Backend: WebSocket message received:', data);
     if (data.type === 'register') {
       clients.set(data.workflowId, ws);
-      console.log(`WebSocket client registered for workflow ${data.workflowId}`);
+      console.log(`Backend: WebSocket client registered for workflow ${data.workflowId}`);
+      ws.send(JSON.stringify({ type: 'registered', workflowId: data.workflowId }));
+      console.log(`Backend: Sent registered confirmation for workflow ${data.workflowId}`);
     }
   });
 
   ws.on('close', () => {
+    console.log('Backend: WebSocket client disconnected.');
     for (const [workflowId, client] of clients.entries()) {
       if (client === ws) {
         clients.delete(workflowId);
-        console.log(`WebSocket client unregistered for workflow ${workflowId}`);
+        console.log(`Backend: WebSocket client unregistered for workflow ${workflowId}`);
         break;
       }
     }
@@ -40,15 +45,17 @@ wss.on('connection', (ws) => {
 
 app.post('/run', async (req, res) => {
   const { nodes, edges, workflowId } = req.body;
-  //console.log('Backend received nodes:', nodes); // THIS WILL APPEAR IN BACKEND TERMINAL
+  console.log(`Backend: /run endpoint hit for workflow ${workflowId}`);
   try {
     // Register the WebSocket client with the workflowId immediately
     if (clients.has(workflowId)) {
+      console.log(`Backend: Sending initial WebSocket message for workflow ${workflowId}`);
       clients.get(workflowId).send(JSON.stringify({ type: 'log', message: 'WebSocket connected.' }));
     }
     const result = await executeWorkflow(nodes, edges, clients, workflowId);
     res.json(result); // executeWorkflow now returns { success, result/error, workflowId }
   } catch (error) {
+    console.error(`Backend: Error in /run for workflow ${workflowId}:`, error);
     res.status(500).json({ success: false, error: error.message });
   }
 });

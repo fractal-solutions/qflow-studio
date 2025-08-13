@@ -381,29 +381,44 @@ function WorkflowBuilder({ onNodeSelected, onNodeConfigChange }) {
     const currentWorkflowId = uuidv4();
     setWorkflowId(currentWorkflowId);
 
+    console.log('Frontend: Initializing WebSocket...');
     ws.current = new WebSocket('ws://localhost:3000');
 
-    // Wait for the WebSocket to open before sending the register message
-    await new Promise((resolve) => {
-      ws.current.onopen = () => {
-        ws.current.send(JSON.stringify({ type: 'register', workflowId: currentWorkflowId }));
-        resolve();
-      };
+    let registeredPromiseResolve;
+    const registeredPromise = new Promise((resolve) => {
+      registeredPromiseResolve = resolve;
     });
 
     ws.current.onmessage = (event) => {
       const message = JSON.parse(event.data);
-      if (message.type === 'log') {
+      console.log('Frontend: WebSocket message received:', message);
+      if (message.type === 'registered' && message.workflowId === currentWorkflowId) {
+        console.log('Frontend: Received registered confirmation for workflow:', message.workflowId);
+        registeredPromiseResolve();
+      } else if (message.type === 'log') {
+        console.log('Frontend: Received log message:', message.message);
         setLogs((prevLogs) => [...prevLogs, message.message]);
       }
     };
 
+    ws.current.onopen = () => {
+      console.log('Frontend: WebSocket opened. Sending register message for workflow:', currentWorkflowId);
+      ws.current.send(JSON.stringify({ type: 'register', workflowId: currentWorkflowId }));
+    };
+
     ws.current.onclose = () => {
+      console.log('Frontend: WebSocket closed.');
       setLogs((prevLogs) => [...prevLogs, 'Agent finished.']);
       setIsAgentRunning(false);
       setWorkflowId(null);
       ws.current = null;
     };
+
+    console.log('Frontend: Waiting for WebSocket registration...');
+    await registeredPromise;
+    console.log('Frontend: WebSocket registered. Proceeding with run request.');
+
+    setIsAgentRunning(true); // <--- Moved this line here
 
     try {
       // Get the latest nodes and edges directly from the React Flow instance
@@ -472,7 +487,6 @@ function WorkflowBuilder({ onNodeSelected, onNodeConfigChange }) {
           setActiveWebhookNodeId(data.activeWebhookNodeId);
         } else {
           showAlert('Success', 'Workflow finished successfully!', 'success');
-          setIsAgentRunning(true);
         }
       } else {
         showAlert('Error',`Workflow failed`, data.error);

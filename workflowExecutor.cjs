@@ -138,9 +138,11 @@ const nodeMap = {
 export const executeWorkflow = async (nodes, edges, clients, workflowId) => {
   const log = (message) => {
     if (clients && clients.has(workflowId)) {
+      console.log(`WorkflowExecutor: Sending log to client for workflow ${workflowId}: ${message}`);
       clients.get(workflowId).send(JSON.stringify({ type: 'log', message }));
+    } else {
+      console.log(`WorkflowExecutor: No client found for workflow ${workflowId}. Log: ${message}`);
     }
-    console.log(`[Workflow ${workflowId}] ${message}`);
   };
 
   log('Workflow execution started.');
