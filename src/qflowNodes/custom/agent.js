@@ -9,7 +9,7 @@ export class CustomAgent extends AsyncNode {
         this.summarizeLLM = summarizeLLM || llmNode;
         this.log = log;
         this.flowRegistry = {};
-        this.maxIterations = 10;
+        this.maxIterations = 50;
         this.goal = '';
         this.systemPrompt = '';
         this.conversationHistory = [];

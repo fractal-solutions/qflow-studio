@@ -1,0 +1,5 @@
+Tool Demonstration Steps:
+1. Web search
+2. Shell command
+3. File operations
+4. Memory retrieval

@@ -1,2 +1,0 @@
-This is a demonstration of file operations.
-Created by Q to showcase write_file and read_file tools.
