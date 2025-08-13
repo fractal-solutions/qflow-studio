@@ -62,6 +62,7 @@ export const nodeIcons = {
   SystemNotificationNode: MessageSquare,
   StripeNode: CreditCard,
   HackerNewsNode: Rss,
+  CustomAgentNode: Bot, // Added CustomAgentNode
 };
 
 

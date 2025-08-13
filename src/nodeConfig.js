@@ -64,5 +64,27 @@ export const nodeConfig = {
       { name: 'responsePath', type: 'text', label: 'Response Path (Optional, defaults to provider)', placeholder: 'e.g., choices[0].message.content' },
       { name: 'baseUrl', type: 'text', label: 'Base URL (for Ollama/HuggingFace)', placeholder: 'http://localhost:11434' },
     ],
+  },
+  CustomAgentNode: {
+    fields: [
+      { name: 'label', type: 'text', label: 'Label' },
+      { name: 'provider', type: 'select', label: 'LLM Provider', options: ['OpenRouter', 'DeepSeek', 'OpenAI', 'Gemini', 'Ollama', 'HuggingFace'] },
+      { name: 'apiKey', type: 'text', label: 'API Key' },
+      { name: 'model', type: 'text', label: 'Model' },
+      { name: 'baseUrl', type: 'text', label: 'Base URL (for Ollama/HuggingFace)' },
+      { name: 'systemPrompt', type: 'textarea', label: 'Agent System Prompt' },
+      { name: 'goal', type: 'textarea', label: 'Agent Goal' },
+      { name: 'tools', type: 'multiselect', label: 'Available Tools', options: [
+        'DuckDuckGoSearchNode', 'ShellCommandNode', 'ReadFileNode', 'WriteFileNode', 'HttpRequestNode',
+        'ScrapeURLNode', 'UserInputNode', 'SemanticMemoryNode', 'TransformNode', 'CodeInterpreterNode',
+        'SubFlowNode', 'IteratorNode', 'InteractiveInputNode', 'SystemNotificationNode', 'BrowserControlNode',
+        'AppendFileNode', 'MemoryNode', 'GoogleSearchNode', 'WebSocketsNode', 'DataExtractorNode',
+        'PDFProcessorNode', 'SpreadsheetNode', 'DataValidationNode', 'GitNode', 'GitHubNode', 'GISNode',
+        'DisplayImageNode', 'ImageGalleryNode', 'HardwareInteractionNode', 'SpeechSynthesisNode',
+        'MultimediaProcessingNode', 'RemoteExecutionNode', 'StripeNode', 'HackerNewsNode'
+      ]},
+      { name: 'maxIterations', type: 'number', label: 'Max Iterations', defaultValue: 10 },
+      { name: 'temperature', type: 'number', label: 'Temperature', defaultValue: 0.7 },
+    ],
   }
 };

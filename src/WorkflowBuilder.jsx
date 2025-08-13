@@ -11,6 +11,7 @@ import ReactFlow, {
 import { Save, Play, Pause, Download, Upload } from 'lucide-react';
 import { useTheme } from './contexts/ThemeContext.jsx';
 import AlertDialog from './components/AlertDialog.jsx';
+import PromptDialog from './components/PromptDialog.jsx';
 import Sidebar from './components/Sidebar.jsx';
 
 const initialNodes = [
@@ -103,6 +104,7 @@ const nodeTypes = {
   SharedStateReaderNode: CustomNode,
   SharedStateWriterNode: CustomNode,
   BranchNode: CustomNode,
+  CustomAgentNode: CustomNode,
 };
 
 function WorkflowBuilder({ onNodeSelected, onNodeConfigChange }) {
@@ -144,6 +146,8 @@ function WorkflowBuilder({ onNodeSelected, onNodeConfigChange }) {
   const [activeWebhookNodeId, setActiveWebhookNodeId] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [nodeToConfigure, setNodeToConfigure] = useState(null);
+  const [showPromptDialog, setShowPromptDialog] = useState(false);
+  const [promptDialogDefaultValue, setPromptDialogDefaultValue] = useState('');
 
   const onConnect = useCallback(
     (params) => {
@@ -245,6 +249,14 @@ function WorkflowBuilder({ onNodeSelected, onNodeConfigChange }) {
   }, [reactFlowInstance]); // Depend on reactFlowInstance
 
   const onExport = useCallback(() => {
+    // Set state to show the custom prompt dialog
+    setShowPromptDialog(true);
+    setPromptDialogDefaultValue(`qflow-workflow-${Date.now()}`);
+  }, []);
+
+  const handlePromptConfirm = useCallback((fileName) => {
+    setShowPromptDialog(false); // Hide the dialog
+
     const currentNodes = reactFlowInstance.getNodes();
     const currentEdges = reactFlowInstance.getEdges();
 
@@ -259,13 +271,23 @@ function WorkflowBuilder({ onNodeSelected, onNodeConfigChange }) {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `qflow-workflow-${Date.now()}.qfw`;
+
+    let finalFileName = fileName.trim();
+    if (finalFileName === '') {
+      finalFileName = `qflow-workflow-${Date.now()}`;
+    }
+    a.download = finalFileName.endsWith('.qfw') ? finalFileName : `${finalFileName}.qfw`;
+
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
     showAlert('Success', 'Workflow exported successfully!', 'success');
   }, [reactFlowInstance]);
+
+  const handlePromptCancel = useCallback(() => {
+    setShowPromptDialog(false); // Hide the dialog
+  }, []);
 
   const onImport = useCallback((event) => {
     const file = event.target.files[0];
@@ -638,6 +660,14 @@ function WorkflowBuilder({ onNodeSelected, onNodeConfigChange }) {
         message={alertInfo.message}
         type={alertInfo.type}
         onClose={closeAlert}
+      />
+      <PromptDialog
+        isOpen={showPromptDialog}
+        title="Export Workflow"
+        message="Enter a filename for your workflow:"
+        defaultValue={promptDialogDefaultValue}
+        onConfirm={handlePromptConfirm}
+        onCancel={handlePromptCancel}
       />
     </div>
   );

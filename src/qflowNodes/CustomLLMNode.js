@@ -100,6 +100,14 @@ export class CustomLLMNode extends AsyncNode {
             const providerRequestBody = config.requestBody(prompt, currentModel);
             currentRequestBody = { ...providerRequestBody, ...currentRequestBody };
 
+            // Replace {{prompt}} placeholder with actual prompt value
+            if (currentRequestBody.messages && Array.isArray(currentRequestBody.messages)) {
+                currentRequestBody.messages = currentRequestBody.messages.map(msg => ({
+                    ...msg,
+                    content: String(msg.content).replace(/\{\{prompt\}\}/g, prompt) // Replace {{prompt}} with actual prompt
+                }));
+            }
+
             // Ensure messages content is always a string
             if (currentRequestBody.messages && Array.isArray(currentRequestBody.messages)) {
                 currentRequestBody.messages = currentRequestBody.messages.map(msg => ({

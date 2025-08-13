@@ -350,6 +350,17 @@ const nodeConfigSchemas = {
     responsePath: { type: 'text', label: 'Response Path' },
     baseUrl: { type: 'text', label: 'Base URL' },
   },
+  CustomAgentNode: {
+    provider: { type: 'select', label: 'LLM Provider', options: ['OpenRouter', 'DeepSeek', 'OpenAI', 'Gemini', 'Ollama', 'HuggingFace'] },
+    apiKey: { type: 'text', label: 'API Key' },
+    model: { type: 'text', label: 'Model' },
+    baseUrl: { type: 'text', label: 'Base URL' },
+    systemPrompt: { type: 'textarea', label: 'Agent System Prompt' },
+    goal: { type: 'textarea', label: 'Agent Goal' },
+    tools: { type: 'json', label: 'Available Tools (JSON Array of Node Names)' },
+    maxIterations: { type: 'number', label: 'Max Iterations', defaultValue: 10 },
+    temperature: { type: 'number', label: 'Temperature', defaultValue: 0.7 },
+  },
 };
 
 export default nodeConfigSchemas;
