@@ -772,7 +772,10 @@ function WorkflowBuilder({ onNodeSelected, onNodeConfigChange }) {
             <ReactFlowProvider>
                 <ReactFlow
                     nodes={nodes}
-                    edges={edges}
+                    edges={edges.map(edge => ({
+                        ...edge,
+                        animated: edge.target === executingNodeId,
+                    }))}
                     nodeTypes={nodeTypes}
                     onNodesChange={onNodesChange}
                     onEdgesChange={onEdgesChange}
