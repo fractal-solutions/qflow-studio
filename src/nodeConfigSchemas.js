@@ -361,6 +361,21 @@ const nodeConfigSchemas = {
     maxIterations: { type: 'number', label: 'Max Iterations', defaultValue: 10 },
     temperature: { type: 'number', label: 'Temperature', defaultValue: 0.7 },
   },
+  CustomInteractiveAgent: {
+    provider: { type: 'select', label: 'LLM Provider', options: ['OpenRouter', 'DeepSeek', 'OpenAI', 'Gemini', 'Ollama', 'HuggingFace'] },
+    apiKey: { type: 'text', label: 'API Key' },
+    model: { type: 'text', label: 'Model' },
+    baseUrl: { type: 'text', label: 'Base URL' },
+    systemPrompt: { 
+      type: 'textarea', 
+      label: 'Agent System Prompt',
+      placeholder: 'You are Q, an autonomous agent. Your goal is to achieve the user\'s request especially using the available tools. Available Tools: {tools} You MUST respond with a single JSON object containing "thought" and "tool_calls". Example: {"thought": "I need to ask for user input", "tool_calls": [{"tool": "interactive_input", "parameters": {"prompt": "What is your name?"}}]}. When done, use {"thought": "Task complete", "final_output": "Summary of what was accomplished"}.'
+    },
+    goal: { type: 'textarea', label: 'Agent Goal' },
+    tools: { type: 'json', label: 'Available Tools (JSON Array of Node Names)' },
+    maxIterations: { type: 'number', label: 'Max Iterations', defaultValue: 10 },
+    temperature: { type: 'number', label: 'Temperature', defaultValue: 0.7 },
+  },
 };
 
 export default nodeConfigSchemas;

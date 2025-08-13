@@ -1,8 +1,8 @@
 import { AsyncNode } from '@fractal-solutions/qflow';
-import { AgentNode, AgentDeepSeekLLMNode, AgentOpenAILLMNode, AgentGeminiLLMNode, AgentOllamaLLMNode, AgentHuggingFaceLLMNode, AgentOpenRouterLLMNode, DuckDuckGoSearchNode, ShellCommandNode, ReadFileNode, WriteFileNode, HttpRequestNode, ScrapeURLNode, UserInputNode, SemanticMemoryNode, TransformNode, CodeInterpreterNode, SubFlowNode, IteratorNode, InteractiveInputNode, SystemNotificationNode, BrowserControlNode, AppendFileNode, MemoryNode, GoogleSearchNode, DataExtractorNode, PDFProcessorNode, SpreadsheetNode, DataValidationNode, GISNode, DisplayImageNode, ImageGalleryNode, HardwareInteractionNode, SpeechSynthesisNode, MultimediaProcessingNode, RemoteExecutionNode } from '@fractal-solutions/qflow/nodes';
+import { AgentDeepSeekLLMNode, AgentOpenAILLMNode, AgentGeminiLLMNode, AgentOllamaLLMNode, AgentHuggingFaceLLMNode, AgentOpenRouterLLMNode, DuckDuckGoSearchNode, ShellCommandNode, ReadFileNode, WriteFileNode, HttpRequestNode, ScrapeURLNode, InteractiveInputNode, SemanticMemoryNode, TransformNode, CodeInterpreterNode, SubFlowNode, IteratorNode, SystemNotificationNode, BrowserControlNode, AppendFileNode, MemoryNode, GoogleSearchNode, DataExtractorNode, PDFProcessorNode, SpreadsheetNode, DataValidationNode, GISNode, DisplayImageNode, ImageGalleryNode, HardwareInteractionNode, SpeechSynthesisNode, MultimediaProcessingNode, RemoteExecutionNode } from '@fractal-solutions/qflow/nodes';
+import { CustomAgent } from './custom/agent.js';
 
-
-export class CustomAgentNode extends AsyncNode {
+export class CustomInteractiveAgent extends AsyncNode {
     constructor(maxRetries = 3, wait = 2) {
         super(maxRetries, wait);
     }
@@ -14,10 +14,10 @@ export class CustomAgentNode extends AsyncNode {
         } = this.params;
 
         if (!provider) {
-            throw new Error('LLM Provider is required for CustomAgentNode.');
+            throw new Error('LLM Provider is required for CustomInteractiveAgent.');
         }
         if (!goal) {
-            throw new Error('Agent Goal is required for CustomAgentNode.');
+            throw new Error('Agent Goal is required for CustomInteractiveAgent.');
         }
 
         let agentLLM;
@@ -57,13 +57,12 @@ export class CustomAgentNode extends AsyncNode {
             WriteFileNode: WriteFileNode,
             HttpRequestNode: HttpRequestNode,
             ScrapeURLNode: ScrapeURLNode,
-            UserInputNode: UserInputNode,
+            InteractiveInputNode: InteractiveInputNode, // Use InteractiveInputNode instead of UserInputNode
             SemanticMemoryNode: SemanticMemoryNode,
             TransformNode: TransformNode,
             CodeInterpreterNode: CodeInterpreterNode,
             SubFlowNode: SubFlowNode,
             IteratorNode: IteratorNode,
-            InteractiveInputNode: InteractiveInputNode,
             SystemNotificationNode: SystemNotificationNode,
             BrowserControlNode: BrowserControlNode,
             AppendFileNode: AppendFileNode,
@@ -87,7 +86,28 @@ export class CustomAgentNode extends AsyncNode {
                 if (toolMap[toolName]) {
                     // Instantiate the tool and pass relevant parameters if needed
                     // For now, assuming tools don't need specific parameters at instantiation
-                    availableTools[toolName.replace('Node', '').toLowerCase()] = new toolMap[toolName]();
+                    const toolInstance = new toolMap[toolName]();
+                    
+                    // Special handling for InteractiveInputNode to set default parameters
+                    if (toolName === 'InteractiveInputNode') {
+                        toolInstance.setParams({
+                            title: 'QFlow Studio Agent',
+                            defaultValue: '',
+                            prompt: 'Please provide input:'
+                        });
+                    }
+                    
+                    // Map tool names to the expected format for agents
+                    let toolKey = toolName.replace('Node', '').toLowerCase();
+                    
+                    // Special handling for InteractiveInputNode to use underscore format
+                    if (toolName === 'InteractiveInputNode') {
+                        toolKey = 'interactive_input';
+                    } else if (toolName === 'SystemNotificationNode') {
+                        toolKey = 'system_notification';
+                    }
+                    
+                    availableTools[toolKey] = toolInstance;
                 } else {
                     console.warn(`Tool ${toolName} not found or supported.`);
                 }
@@ -97,17 +117,15 @@ export class CustomAgentNode extends AsyncNode {
         // For now, summarization LLM is the same as agent LLM
         const summarizeLLM = agentLLM; 
 
-        const agent = new AgentNode(agentLLM, availableTools, summarizeLLM);
-        agent.setParams({ goal, maxIterations });
+        const agent = new CustomAgent(agentLLM, availableTools, summarizeLLM);
+        agent.setParams({ goal, maxIterations, systemPrompt });
         
-        // Set system prompt if provided
-        if (systemPrompt) {
-            agent.systemPrompt = systemPrompt;
-        }
+        // Ensure the agent has access to the available tools for prompt building
+        agent.availableTools = availableTools;
 
-        console.log('[CustomAgentNode] Running agent with goal:', goal);
+        console.log('[CustomInteractiveAgent] Running agent with goal:', goal);
         const result = await agent.execAsync();
-        console.log('[CustomAgentNode] Agent finished with result:', result);
+        console.log('[CustomInteractiveAgent] Agent finished with result:', result);
 
         return result;
     }

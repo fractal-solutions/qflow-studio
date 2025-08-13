@@ -105,6 +105,7 @@ const nodeTypes = {
   SharedStateWriterNode: CustomNode,
   BranchNode: CustomNode,
   CustomAgentNode: (props) => <CustomNode {...props} />,
+  CustomInteractiveAgent: (props) => <CustomNode {...props} />,
 };
 
 function WorkflowBuilder({ onNodeSelected, onNodeConfigChange }) {

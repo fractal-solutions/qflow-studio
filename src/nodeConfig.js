@@ -88,5 +88,27 @@ export const nodeConfig = {
       { name: 'maxIterations', type: 'number', label: 'Max Iterations', defaultValue: 10 },
       { name: 'temperature', type: 'number', label: 'Temperature', defaultValue: 0.7 },
     ],
+  },
+  CustomInteractiveAgent: {
+    fields: [
+      { name: 'label', type: 'text', label: 'Label' },
+      { name: 'provider', type: 'select', label: 'LLM Provider', options: ['OpenRouter', 'DeepSeek', 'OpenAI', 'Gemini', 'Ollama', 'HuggingFace'] },
+      { name: 'apiKey', type: 'text', label: 'API Key' },
+      { name: 'model', type: 'text', label: 'Model' },
+      { name: 'baseUrl', type: 'text', label: 'Base URL (for Ollama/HuggingFace)' },
+      { name: 'systemPrompt', type: 'textarea', label: 'Agent System Prompt', defaultValue: DEFAULT_AGENT_SYSTEM_PROMPT },
+      { name: 'goal', type: 'textarea', label: 'Agent Goal' },
+      { name: 'tools', type: 'multiselect', label: 'Available Tools', options: [
+        'DuckDuckGoSearchNode', 'ShellCommandNode', 'ReadFileNode', 'WriteFileNode', 'HttpRequestNode',
+        'ScrapeURLNode', 'InteractiveInputNode', 'SemanticMemoryNode', 'TransformNode', 'CodeInterpreterNode',
+        'SubFlowNode', 'IteratorNode', 'SystemNotificationNode', 'BrowserControlNode',
+        'AppendFileNode', 'MemoryNode', 'GoogleSearchNode', 'WebSocketsNode', 'DataExtractorNode',
+        'PDFProcessorNode', 'SpreadsheetNode', 'DataValidationNode', 'GitNode', 'GitHubNode', 'GISNode',
+        'DisplayImageNode', 'ImageGalleryNode', 'HardwareInteractionNode', 'SpeechSynthesisNode',
+        'MultimediaProcessingNode', 'RemoteExecutionNode', 'StripeNode', 'HackerNewsNode'
+      ]},
+      { name: 'maxIterations', type: 'number', label: 'Max Iterations', defaultValue: 10 },
+      { name: 'temperature', type: 'number', label: 'Temperature', defaultValue: 0.7 },
+    ],
   }
 };

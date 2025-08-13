@@ -181,8 +181,19 @@ const NodeConfigModal = ({ node, onConfigChange, onClose, onDeleteNode, activeWe
       }
     }
 
-    // Ensure tools is an array for CustomAgentNode
-    if (node.type === 'CustomAgentNode' && (!displayNodeData.tools || !Array.isArray(displayNodeData.tools))) {
+    // Special handling for CustomInteractiveAgent to apply provider presets on initial load
+    if (node.type === 'CustomInteractiveAgent' && displayNodeData.provider) {
+      const provider = displayNodeData.provider;
+      const config = CustomLLMNode.providerConfigs[provider]; // Re-using CustomLLMNode's provider configs
+      if (config) {
+        if (!displayNodeData.model) displayNodeData.model = config.defaultModel;
+        if (!displayNodeData.apiKey && config.apiKeyRequired) displayNodeData.apiKey = ''; // Ensure apiKey is present if required
+        if (!displayNodeData.baseUrl && typeof config.apiUrl === 'function') displayNodeData.baseUrl = ''; // Ensure baseUrl is present if apiUrl is a function
+      }
+    }
+
+    // Ensure tools is an array for CustomAgentNode and CustomInteractiveAgent
+    if ((node.type === 'CustomAgentNode' || node.type === 'CustomInteractiveAgent') && (!displayNodeData.tools || !Array.isArray(displayNodeData.tools))) {
       displayNodeData.tools = [];
     }
 
@@ -231,6 +242,25 @@ const NodeConfigModal = ({ node, onConfigChange, onClose, onDeleteNode, activeWe
 
       // Special handling for CustomAgentNode provider change
       if (node.type === 'CustomAgentNode' && name === 'provider') {
+        const selectedProvider = newParamValue;
+        const config = CustomLLMNode.providerConfigs[selectedProvider]; // Re-using CustomLLMNode's provider configs
+        let updatedData = { ...prevData, [name]: selectedProvider };
+
+        if (config) {
+          updatedData.model = config.defaultModel;
+          updatedData.apiKey = config.apiKeyRequired ? (updatedData.apiKey || '') : ''; // Clear apiKey if not required
+          updatedData.baseUrl = typeof config.apiUrl === 'function' ? (updatedData.baseUrl || '') : ''; // Clear baseUrl if not a function-based URL
+        } else {
+          // Clear fields if no provider selected or provider not found
+          updatedData.model = '';
+          updatedData.apiKey = '';
+          updatedData.baseUrl = '';
+        }
+        return updatedData;
+      }
+
+      // Special handling for CustomInteractiveAgent provider change
+      if (node.type === 'CustomInteractiveAgent' && name === 'provider') {
         const selectedProvider = newParamValue;
         const config = CustomLLMNode.providerConfigs[selectedProvider]; // Re-using CustomLLMNode's provider configs
         let updatedData = { ...prevData, [name]: selectedProvider };
