@@ -32,7 +32,7 @@ const initialNodes = [
     style: {
       background: 'var(--color-success)',
       color: 'white',
-      border: '2px solid var(--color-success)',
+      border: '2px solid var(--color-primary)',
       borderRadius: '8px',
       padding: '12px 16px',
       fontSize: '8px', // Changed to 8px
@@ -144,8 +144,23 @@ function WorkflowBuilder({ onNodeSelected, onNodeConfigChange }) {
   const [isAgentRunning, setIsAgentRunning] = useState(false);
   const [isLogOpen, setIsLogOpen] = useState(false);
   const [logs, setLogs] = useState([]);
+  const [executingNodeId, setExecutingNodeId] = useState(null);
   const ws = useRef(null);
   const logContainerRef = useRef(null);
+
+  const resetAllNodeStyles = useCallback(() => {
+    setNodes((nds) =>
+      nds.map((node) => ({
+        ...node,
+        style: {
+          ...node.style,
+          border: '2px solid var(--color-primary)', // Default border
+          boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)', // Default shadow
+        },
+      }))
+    );
+    setExecutingNodeId(null);
+  }, [setNodes, setExecutingNodeId]);
 
   useEffect(() => {
     if (logContainerRef.current) {
@@ -405,7 +420,50 @@ function WorkflowBuilder({ onNodeSelected, onNodeConfigChange }) {
         registeredPromiseResolve();
       } else if (message.type === 'log') {
         console.log('Frontend: Received log message:', message.message);
-        setLogs((prevLogs) => [...prevLogs, message.message]);
+        let logEntry = message.message;
+        if (message.nodeId) {
+          const node = nodes.find(n => n.id === message.nodeId);
+          if (node) {
+            logEntry = `[${node.data.label || node.type}] ${message.message}`;
+          } else {
+            logEntry = `[Node ${message.nodeId}] ${message.message}`;
+          }
+        }
+        setLogs((prevLogs) => [...prevLogs, logEntry]);
+      } else if (message.type === 'node_start') {
+        setExecutingNodeId(message.nodeId);
+        setNodes((nds) =>
+          nds.map((node) => {
+            if (node.id === message.nodeId) {
+              return {
+                ...node,
+                style: {
+                  ...node.style,
+                  border: '1px solid white', // White border
+                  boxShadow: '0 0 15px white', // White glow
+                },
+              };
+            }
+            return node;
+          })
+        );
+      } else if (message.type === 'node_end') {
+        setExecutingNodeId(null);
+        setNodes((nds) =>
+          nds.map((node) => {
+            if (node.id === message.nodeId) {
+              return {
+                ...node,
+                style: {
+                  ...node.style,
+                  border: '2px solid var(--color-primary)', // Reset to default border
+                  boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)', // Reset to default shadow
+                },
+              };
+            }
+            return node;
+          })
+        );
       }
     };
 
@@ -420,6 +478,7 @@ function WorkflowBuilder({ onNodeSelected, onNodeConfigChange }) {
       setIsAgentRunning(false);
       setWorkflowId(null);
       ws.current = null;
+      resetAllNodeStyles(); // Reset all node styles on WebSocket close
     };
 
     console.log('Frontend: Waiting for WebSocket registration...');
@@ -522,6 +581,7 @@ function WorkflowBuilder({ onNodeSelected, onNodeConfigChange }) {
         if (ws.current) {
           ws.current.close();
         }
+        resetAllNodeStyles(); // Reset all node styles on stop
       } else {
         showAlert('Error', `Failed to stop agent: ${data.error}`, 'error');
       }

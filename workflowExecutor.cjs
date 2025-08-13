@@ -136,10 +136,10 @@ const nodeMap = {
 };
 
 export const executeWorkflow = async (nodes, edges, clients, workflowId) => {
-  const log = (message) => {
+  const log = (message, nodeId = null, nodeType = null) => {
     if (clients && clients.has(workflowId)) {
-      console.log(`WorkflowExecutor: Sending log to client for workflow ${workflowId}: ${message}`);
-      clients.get(workflowId).send(JSON.stringify({ type: 'log', message }));
+      console.log(`WorkflowExecutor: Sending log to client for workflow ${workflowId}: ${message} (Node: ${nodeId}, Type: ${nodeType})`);
+      clients.get(workflowId).send(JSON.stringify({ type: 'log', message, nodeId, nodeType }));
     } else {
       console.log(`WorkflowExecutor: No client found for workflow ${workflowId}. Log: ${message}`);
     }
@@ -178,7 +178,8 @@ export const executeWorkflow = async (nodes, edges, clients, workflowId) => {
     const NodeClass = nodeMap[node.type];
       if (NodeClass) {
         const flowNode = new NodeClass();
-        if (node.type === 'CustomInteractiveAgent') {
+        // Pass the log function to ALL nodes
+        if (typeof flowNode.setLogFunction === 'function') {
           flowNode.setLogFunction(log);
         }
       flowNode.id = node.id;
@@ -333,6 +334,50 @@ export const executeWorkflow = async (nodes, edges, clients, workflowId) => {
           }
         };
       }
+
+      // Store original execAsync and exec methods
+      const originalExecAsync = flowNode.execAsync;
+      const originalExec = flowNode.exec;
+
+      // Wrap execAsync to send node_start and node_end events
+      flowNode.execAsync = async (shared, prepRes) => {
+        log(`Executing node: ${flowNode.type} (${flowNode.id})`, flowNode.id, flowNode.type);
+        if (clients && clients.has(workflowId)) {
+          clients.get(workflowId).send(JSON.stringify({ type: 'node_start', nodeId: flowNode.id, nodeType: flowNode.type }));
+        }
+        try {
+          const result = await originalExecAsync.call(flowNode, shared, prepRes);
+          log(`Node finished: ${flowNode.type} (${flowNode.id})`, flowNode.id, flowNode.type);
+          return result;
+        } catch (error) {
+          log(`Node failed: ${flowNode.type} (${flowNode.id}) - ${error.message}`, flowNode.id, flowNode.type);
+          throw error; // Re-throw the error so the workflow can handle it
+        } finally {
+          if (clients && clients.has(workflowId)) {
+            clients.get(workflowId).send(JSON.stringify({ type: 'node_end', nodeId: flowNode.id, nodeType: flowNode.type }));
+          }
+        }
+      };
+
+      // Wrap exec for synchronous nodes to send node_start and node_end events
+      flowNode.exec = (shared, prepRes) => {
+        log(`Executing node: ${flowNode.type} (${flowNode.id})`, flowNode.id, flowNode.type);
+        if (clients && clients.has(workflowId)) {
+          clients.get(workflowId).send(JSON.stringify({ type: 'node_start', nodeId: flowNode.id, nodeType: flowNode.type }));
+        }
+        try {
+          const result = originalExec.call(flowNode, shared, prepRes);
+          log(`Node finished: ${flowNode.type} (${flowNode.id})`, flowNode.id, flowNode.type);
+          return result;
+        } catch (error) {
+          log(`Node failed: ${flowNode.type} (${flowNode.id}) - ${error.message}`, flowNode.id, flowNode.type);
+          throw error; // Re-throw the error
+        } finally {
+          if (clients && clients.has(workflowId)) {
+            clients.get(workflowId).send(JSON.stringify({ type: 'node_end', nodeId: flowNode.id, nodeType: flowNode.type }));
+          }
+        }
+      };
 
       flowNodes[node.id] = flowNode;
     } else {
