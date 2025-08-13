@@ -431,6 +431,9 @@ export const executeWorkflow = async (nodes, edges, clients, workflowId) => {
       await webhookNodeInstance.execAsync({});
       registerWebhook(webhookNodeEntry.id, webhookNodeInstance.server);
       const { port, path } = webhookNodeInstance.params;
+      // Store the webhook server in activeWorkflows
+      activeWorkflows.set(workflowId, { flow: webhookFlow, webhookServer: webhookNodeInstance.server }); // Store the server here
+
       return { success: true, result: `Webhook listener started at http://localhost:${port}${path}`, isWebhookFlow: true, activeWebhookNodeId: webhookNodeEntry.id };
     } catch (error) {
       if (error.code === 'EADDRINUSE') {
@@ -488,9 +491,23 @@ export const executeWorkflow = async (nodes, edges, clients, workflowId) => {
 export const stopWorkflow = (workflowId) => {
   const workflow = activeWorkflows.get(workflowId);
   if (workflow) {
+    // If it's a webhook workflow, close the server
+    if (workflow.webhookServer) {
+      workflow.webhookServer.close(() => {
+        console.log(`Webhook server for workflow ${workflowId} closed.`);
+      });
+    }
+
+    // If there's an agent, stop it
     if (workflow.agent) {
       workflow.agent.stop();
     }
+
+    // If the flow itself has a stop method (e.g., AsyncFlow.stop()), call it
+    if (workflow.flow && typeof workflow.flow.stop === 'function') {
+      workflow.flow.stop();
+    }
+
     activeWorkflows.delete(workflowId);
     return { success: true, message: `Workflow ${workflowId} stopped.` };
   } else {
