@@ -6,21 +6,30 @@ class BranchNode extends AsyncNode {
     this.conditionSource = 'static'; // 'static', 'sharedState', 'expression'
     this.conditionValue = '';
     this.branches = [{ value: 'default', label: 'Default Branch' }];
+    this.previousNodeResult = null;
+  }
+
+  async prepAsync(shared, prepRes) {
+    this.previousNodeResult = prepRes;
+    return prepRes;
   }
 
   async execAsync() {
+    // This node's primary execution doesn't produce a direct output for the next node.
+    // It determines the branch, which will be returned by postAsync.
+    console.log(`BranchNode: Executing execAsync to determine branch.`);
+    return undefined; // Or a generic success/status object if needed
+  }
+
+  async postAsync(shared, prepRes, execRes) {
     let result = 'default';
 
     switch (this.conditionSource) {
       case 'static':
-        // For static, the conditionValue itself is the branch to take
         result = this.conditionValue;
         break;
       case 'sharedState':
-        // For sharedState, conditionValue is the key to look up in shared state
-        // The value of that shared state key determines the branch
         const sharedStateValue = this.getSharedState(this.conditionValue);
-        // Find a branch whose 'value' matches the shared state value
         const matchingBranchByValue = this.branches.find(b => b.value === String(sharedStateValue));
         if (matchingBranchByValue) {
           result = matchingBranchByValue.value;
@@ -30,14 +39,9 @@ class BranchNode extends AsyncNode {
         }
         break;
       case 'expression':
-        // For expression, conditionValue is a JavaScript expression to evaluate
-        // The result of the expression determines the branch
         try {
-          // Create a function from the expression, passing sharedState as context
           const evaluate = new Function('sharedState', `return ${this.conditionValue};`);
           const expressionResult = evaluate(this.getSharedState());
-          
-          // Find a branch whose 'value' matches the expression result
           const matchingBranchByExpression = this.branches.find(b => b.value === String(expressionResult));
           if (matchingBranchByExpression) {
             result = matchingBranchByExpression.value;
@@ -47,23 +51,25 @@ class BranchNode extends AsyncNode {
           }
         } catch (e) {
           console.error(`BranchNode: Error evaluating expression '${this.conditionValue}':`, e);
-          result = 'default'; // Fallback on error
+          result = 'default';
         }
+        break;
+      case 'previousNodeResult':
+        result = this.previousNodeResult;
         break;
       default:
         console.warn(`BranchNode: Unknown condition source '${this.conditionSource}'. Falling back to default.`);
         result = 'default';
     }
 
-    // Ensure the returned result is one of the defined branch values
     const isValidBranch = this.branches.some(b => b.value === result);
     if (!isValidBranch) {
       console.warn(`BranchNode: Determined branch '${result}' is not defined in branches. Falling back to default.`);
       result = 'default';
     }
 
-    console.log(`BranchNode: Executed. Returning branch: ${result}`);
-    return result;
+    console.log(`BranchNode: postAsync returning branch: ${result}`);
+    return result; // Return the branch name
   }
 }
 

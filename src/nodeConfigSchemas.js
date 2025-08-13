@@ -340,6 +340,16 @@ const nodeConfigSchemas = {
     conditionValue: { type: 'textarea', label: 'Condition Value/Key', placeholder: 'e.g., true, my_data.status, x > 5' },
     branches: { type: 'json', label: 'Branches (JSON Array)', placeholder: '[{"value": "true", "label": "True Branch"}, {"value": "false", "label": "False Branch"}]' , defaultValue: '[{"value": "default", "label": "Default Branch"}]' },
   },
+  CustomLLMNode: {
+    provider: { type: 'select', label: 'LLM Provider', options: ['', 'OpenRouter', 'DeepSeek', 'OpenAI', 'Gemini', 'Ollama', 'HuggingFace'] },
+    apiUrl: { type: 'text', label: 'API URL' },
+    apiKey: { type: 'text', label: 'API Key' },
+    model: { type: 'text', label: 'Model' },
+    prompt: { type: 'textarea', label: 'Prompt' },
+    requestBody: { type: 'json', label: 'Request Body (JSON)' },
+    responsePath: { type: 'text', label: 'Response Path' },
+    baseUrl: { type: 'text', label: 'Base URL' },
+  },
 };
 
 export default nodeConfigSchemas;

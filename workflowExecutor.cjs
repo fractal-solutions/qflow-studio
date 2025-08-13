@@ -1,8 +1,10 @@
 import { Node, Flow, AsyncNode, AsyncFlow, AsyncBatchNode, AsyncParallelBatchNode } from '@fractal-solutions/qflow';
-import { AgentNode, EmbeddingNode, SemanticMemoryNode, MemoryNode, TransformNode, CodeInterpreterNode, UserInputNode, InteractiveInputNode, IteratorNode, SubFlowNode, SchedulerNode, ReadFileNode, WriteFileNode, ShellCommandNode, HttpRequestNode, DeepSeekLLMNode, AgentDeepSeekLLMNode, OpenAILLMNode, AgentOpenAILLMNode, GeminiLLMNode, OllamaLLMNode, AgentOllamaLLMNode, HuggingFaceLLMNode, AgentHuggingFaceLLMNode, OpenRouterLLMNode, AgentOpenRouterLLMNode, DuckDuckGoSearchNode, GoogleSearchNode, ScrapeURLNode, BrowserControlNode, WebHookNode, AppendFileNode, ListDirectoryNode, DataExtractorNode, PDFProcessorNode, SpreadsheetNode, DataValidationNode, GISNode, DisplayImageNode, ImageGalleryNode, HardwareInteractionNode, SpeechSynthesisNode, MultimediaProcessingNode, RemoteExecutionNode, SystemNotificationNode } from '@fractal-solutions/qflow/nodes';
+import { AgentNode, EmbeddingNode, SemanticMemoryNode, MemoryNode, TransformNode, CodeInterpreterNode, UserInputNode, InteractiveInputNode, IteratorNode, SubFlowNode, SchedulerNode, ReadFileNode, WriteFileNode, HttpRequestNode, DeepSeekLLMNode, AgentDeepSeekLLMNode, OpenAILLMNode, AgentOpenAILLMNode, GeminiLLMNode, OllamaLLMNode, AgentOllamaLLMNode, HuggingFaceLLMNode, AgentHuggingFaceLLMNode, OpenRouterLLMNode, AgentOpenRouterLLMNode, DuckDuckGoSearchNode, GoogleSearchNode, ScrapeURLNode, BrowserControlNode, WebHookNode, AppendFileNode, ListDirectoryNode, DataExtractorNode, PDFProcessorNode, SpreadsheetNode, DataValidationNode, GISNode, DisplayImageNode, ImageGalleryNode, HardwareInteractionNode, SpeechSynthesisNode, MultimediaProcessingNode, RemoteExecutionNode } from '@fractal-solutions/qflow/nodes';
+import { ShellCommandNode, SystemNotificationNode } from './src/qflowNodes/custom';
 import { SharedStateReaderNode } from './src/qflowNodes/SharedStateReaderNode.js';
 import { SharedStateWriterNode } from './src/qflowNodes/SharedStateWriterNode.js';
 import { BranchNode } from './src/qflowNodes/BranchNode.js';
+import { CustomLLMNode } from './src/qflowNodes/CustomLLMNode.js';
 import { registerWebhook } from './webhookRegistry.js';
 
 
@@ -123,9 +125,12 @@ const nodeMap = {
   SharedStateReaderNode,
   SharedStateWriterNode,
   BranchNode,
+  CustomLLMNode,
 };
 
 export const executeWorkflow = async (nodes, edges) => {
+  console.log('WorkflowExecutor: Received nodes:', nodes);
+  console.log('WorkflowExecutor: Received edges:', edges);
   if (!nodes || nodes.length === 0) {
     console.error('No nodes to execute.');
     return { success: false, error: 'No nodes to execute.' };
@@ -189,7 +194,11 @@ export const executeWorkflow = async (nodes, edges) => {
         // These properties are now correctly unwrapped in resolvedNodeData
         flowNode.conditionSource = resolvedNodeData.conditionSource;
         flowNode.conditionValue = resolvedNodeData.conditionValue;
-        flowNode.branches = resolvedNodeData.branches;
+        if (resolvedNodeData.branches && Array.isArray(resolvedNodeData.branches.value)) {
+          flowNode.branches = resolvedNodeData.branches.value;
+        } else {
+          flowNode.branches = resolvedNodeData.branches;
+        }
       }
       // --- END OF BRANCHNODE SPECIFIC ASSIGNMENT ---
 
@@ -246,7 +255,7 @@ export const executeWorkflow = async (nodes, edges) => {
         if (originalPrepAsync) {
           // If original prepAsync exists, call it.
           // If it returns something, merge it with currentResolvedParams.
-          const originalResult = await originalPrepAsync(shared);
+          const originalResult = await originalPrepAsync.call(flowNode, shared);
           if (originalResult && typeof originalResult === 'object') {
             prepResult = { ...currentResolvedParams, ...originalResult };
           } else if (originalResult !== undefined) {
@@ -267,7 +276,7 @@ export const executeWorkflow = async (nodes, edges) => {
 
         let prepResult;
         if (originalPrep) {
-          prepResult = originalPrep(shared);
+          prepResult = originalPrep.call(flowNode, shared);
         } else {
           prepResult = currentResolvedParams;
         }
@@ -286,7 +295,7 @@ export const executeWorkflow = async (nodes, edges) => {
           shared[outputKey] = execRes; // Store execRes in shared state
           console.log(`WorkflowExecutor: Stored output of ${flowNode.params.label} in shared.${outputKey}:`, execRes);
           if (originalPostAsync) {
-            return await originalPostAsync(shared, prepRes, execRes);
+            return await originalPostAsync.call(flowNode, shared, prepRes, execRes);
           } else {
             return execRes;
           }
@@ -297,7 +306,7 @@ export const executeWorkflow = async (nodes, edges) => {
           shared[outputKey] = execRes; // Store execRes in shared state
           console.log(`WorkflowExecutor: Stored output of ${flowNode.params.label} in shared.${outputKey}:`, execRes);
           if (originalPost) {
-            return originalPost(shared, prepRes, execRes);
+            return originalPost.call(flowNode, shared, prepRes, execRes);
           } else {
             return execRes;
           }
@@ -366,55 +375,32 @@ export const executeWorkflow = async (nodes, edges) => {
     }
   }
 
+  const inputNode = nodes.find(node => node.type === 'input');
   let startNodeId = null;
-  // Find the target of an edge originating from the React Flow 'input' node
-  const inputNodeEdge = edges.find(edge => {
-    const sourceReactFlowNode = nodes.find(n => n.id === edge.source);
-    return sourceReactFlowNode && sourceReactFlowNode.type === 'input';
-  });
-
-  if (inputNodeEdge) {
-    startNodeId = inputNodeEdge.target;
-  } else {
-    // Fallback: if no edge from 'input' node, find a Qflow node with no incoming Qflow edges
-    const qflowNodeIds = Object.keys(flowNodes);
-    startNodeId = qflowNodeIds.find(nodeId => {
-      return !edges.some(edge => edge.target === nodeId && qflowNodeIds.includes(edge.source));
-    });
+  if (inputNode) {
+    const startEdge = edges.find(edge => edge.source === inputNode.id);
+    if (startEdge) {
+      startNodeId = startEdge.target;
+    }
   }
 
   if (!startNodeId) {
-    console.error('Could not find a valid qflow start node.');
-    return { success: false, error: 'Could not find a valid qflow start node.' };
+    // If no input node or it's not connected, fallback to the old method
+    startNodeId = findStartNodeId(nodes, edges);
   }
 
   const startNode = flowNodes[startNodeId];
+  console.log(`WorkflowExecutor: Start node: ${startNode.type} (${startNode.id})`);
+  if (!startNode) {
+    console.error('Workflow failed: Could not find a start node.');
+    return { success: false, error: 'Could not find a start node.' };
+  }
   const flow = new AsyncFlow(startNode);
 
   try {
     console.log('Running workflow...');
     let result = await flow.runAsync({});
     console.log('Workflow finished:', result);
-
-    // Check if the result is a branch name from a BranchNode
-    if (typeof result === 'string' && startNode.type === 'BranchNode') {
-      const branchNodeInstance = startNode; // Since startNode is the BranchNode
-      const chosenBranch = result;
-
-      if (branchNodeInstance._next && branchNodeInstance._next[chosenBranch]) {
-        const nextNodeToExecute = branchNodeInstance._next[chosenBranch];
-        console.log(`WorkflowExecutor: BranchNode returned '${chosenBranch}'. Executing next node: ${nextNodeToExecute.id} (${nextNodeToExecute.type})`);
-
-        // Now, execute the nextNodeToExecute
-        // Create a new AsyncFlow with this nextNodeToExecute as the startNode.
-        const subFlow = new AsyncFlow(nextNodeToExecute);
-        result = await subFlow.runAsync({}); // Run the rest of the flow from this node
-        console.log('Workflow continued from branch:', result);
-      } else {
-        console.warn(`WorkflowExecutor: BranchNode returned '${chosenBranch}', but no next node found for this branch.`);
-      }
-    }
-
     return { success: true, result, isWebhookFlow: false };
   } catch (error) {
     console.error('Workflow failed:', error);

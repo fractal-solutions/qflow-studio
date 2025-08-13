@@ -51,5 +51,18 @@ export const nodeConfig = {
       { name: 'conditionValue', type: 'textarea', label: 'Condition Value/Key', placeholder: 'e.g., true, my_data.status, x > 5' },
       { name: 'branches', type: 'json', label: 'Branches (JSON Array)', placeholder: '[{"value": "true", "label": "True Branch"}, {"value": "false", "label": "False Branch"}]' , defaultValue: '[{"value": "default", "label": "Default Branch"}]' },
     ],
+  },
+  CustomLLMNode: {
+    fields: [
+      { name: 'label', type: 'text', label: 'Label' },
+      { name: 'provider', type: 'select', label: 'LLM Provider (Optional)', options: ['', 'OpenRouter', 'DeepSeek', 'OpenAI', 'Gemini', 'Ollama', 'HuggingFace'] },
+      { name: 'apiUrl', type: 'text', label: 'API URL (Optional, defaults to provider)', placeholder: 'e.g., https://api.openai.com/v1/chat/completions' },
+      { name: 'apiKey', type: 'text', label: 'API Key (Optional, required by some providers)' },
+      { name: 'model', type: 'text', label: 'Model (Optional, defaults to provider)', placeholder: 'e.g., gpt-3.5-turbo' },
+      { name: 'prompt', type: 'textarea', label: 'Prompt' },
+      { name: 'requestBody', type: 'json', label: 'Request Body (JSON, merged with provider defaults)', placeholder: '{"messages":[{"role":"user","content":"Hello"}]}' },
+      { name: 'responsePath', type: 'text', label: 'Response Path (Optional, defaults to provider)', placeholder: 'e.g., choices[0].message.content' },
+      { name: 'baseUrl', type: 'text', label: 'Base URL (for Ollama/HuggingFace)', placeholder: 'http://localhost:11434' },
+    ],
   }
 };

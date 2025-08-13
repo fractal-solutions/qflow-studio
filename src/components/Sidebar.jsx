@@ -37,6 +37,7 @@ const integratedNodes = {
         { name: 'AgentHuggingFaceLLMNode', icon: <BrainCircuit className="w-5 h-5 mr-3" />, description: 'Agent HuggingFace LLM' },
         { name: 'OpenRouterLLMNode', icon: <BrainCircuit className="w-5 h-5 mr-3" />, description: 'OpenRouter LLM' },
         { name: 'AgentOpenRouterLLMNode', icon: <BrainCircuit className="w-5 h-5 mr-3" />, description: 'Agent OpenRouter LLM' },
+        { name: 'CustomLLMNode', icon: <BrainCircuit className="w-5 h-5 mr-3" />, description: 'Customizable LLM' },
     ],
     'Web': [
         { name: 'ShellCommandNode', icon: <Terminal className="w-5 h-5 mr-3" />, description: 'Execute shell command' },
