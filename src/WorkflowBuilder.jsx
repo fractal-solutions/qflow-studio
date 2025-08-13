@@ -14,6 +14,8 @@ import AlertDialog from './components/AlertDialog.jsx';
 import PromptDialog from './components/PromptDialog.jsx';
 import Sidebar from './components/Sidebar.jsx';
 
+import { v4 as uuidv4 } from 'uuid';
+
 const initialNodes = [
   {
     id: '1',
@@ -138,6 +140,10 @@ function WorkflowBuilder({ onNodeSelected, onNodeConfigChange }) {
 
   const [reactFlowInstance, setReactFlowInstance] = useState(null);
   const [isRunning, setIsRunning] = useState(false);
+  const [workflowId, setWorkflowId] = useState(null);
+  const [isAgentRunning, setIsAgentRunning] = useState(false);
+  const [logs, setLogs] = useState([]);
+  const ws = useRef(null);
 
   // Define the onInit callback here, within the WorkflowBuilder component
   const onInit = useCallback((instance) => {
@@ -371,6 +377,34 @@ function WorkflowBuilder({ onNodeSelected, onNodeConfigChange }) {
 
   const onRun = useCallback(async () => {
     setIsRunning(true);
+    setLogs([]);
+    const currentWorkflowId = uuidv4();
+    setWorkflowId(currentWorkflowId);
+
+    ws.current = new WebSocket('ws://localhost:3000');
+
+    // Wait for the WebSocket to open before sending the register message
+    await new Promise((resolve) => {
+      ws.current.onopen = () => {
+        ws.current.send(JSON.stringify({ type: 'register', workflowId: currentWorkflowId }));
+        resolve();
+      };
+    });
+
+    ws.current.onmessage = (event) => {
+      const message = JSON.parse(event.data);
+      if (message.type === 'log') {
+        setLogs((prevLogs) => [...prevLogs, message.message]);
+      }
+    };
+
+    ws.current.onclose = () => {
+      setLogs((prevLogs) => [...prevLogs, 'Agent finished.']);
+      setIsAgentRunning(false);
+      setWorkflowId(null);
+      ws.current = null;
+    };
+
     try {
       // Get the latest nodes and edges directly from the React Flow instance
       const currentNodes = reactFlowInstance.getNodes();
@@ -413,7 +447,7 @@ function WorkflowBuilder({ onNodeSelected, onNodeConfigChange }) {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ nodes: transformedNodes, edges: currentEdges }),
+        body: JSON.stringify({ nodes: transformedNodes, edges: currentEdges, workflowId: currentWorkflowId }),
       });
       const data = await response.json();
       if (data.success) {
@@ -438,6 +472,7 @@ function WorkflowBuilder({ onNodeSelected, onNodeConfigChange }) {
           setActiveWebhookNodeId(data.activeWebhookNodeId);
         } else {
           showAlert('Success', 'Workflow finished successfully!', 'success');
+          setIsAgentRunning(true);
         }
       } else {
         showAlert('Error',`Workflow failed`, data.error);
@@ -448,6 +483,30 @@ function WorkflowBuilder({ onNodeSelected, onNodeConfigChange }) {
       setIsRunning(false);
     }
   }, [reactFlowInstance]); // Depend on reactFlowInstance
+
+  const onStop = async () => {
+    if (!workflowId) return;
+    try {
+      const response = await fetch('http://localhost:3000/stop-agent', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ workflowId }),
+      });
+      const data = await response.json();
+      if (data.success) {
+        showAlert('Success', 'Agent stopped successfully!', 'success');
+        if (ws.current) {
+          ws.current.close();
+        }
+      } else {
+        showAlert('Error', `Failed to stop agent: ${data.error}`, 'error');
+      }
+    } catch (error) {
+      showAlert('Error', `Error stopping agent: ${error.message}`, 'error');
+    }
+  };
 
   const onStopWebhook = useCallback(async () => {
     if (!activeWebhookNodeId) return; // Should not happen if button is correctly conditional
@@ -538,15 +597,15 @@ function WorkflowBuilder({ onNodeSelected, onNodeConfigChange }) {
         </div>
         <div className="flex items-center space-x-4">
           <button
-            onClick={onRun}
+            onClick={isAgentRunning ? onStop : onRun}
             className={`flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition-colors ${
-              isRunning && !activeWebhookNodeId // If running and not a webhook, or if it's a webhook and not active
+              isRunning || isAgentRunning
                 ? 'bg-[var(--color-error)]/10 text-[var(--color-error)] hover:bg-[var(--color-error)]/20 border border-[var(--color-error)]/20'
                 : 'bg-[var(--color-success)]/10 text-[var(--color-success)] hover:bg-[var(--color-success)]/20 border border-[var(--color-success)]/20'
             }`}
           >
-            {isRunning ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-            <span>{isRunning ? 'Stop' : 'Run'}</span>
+            {isAgentRunning ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+            <span>{isAgentRunning ? 'Stop Agent' : 'Run'}</span>
           </button>
           {activeWebhookNodeId && ( // Conditionally render stop button for active webhook
             <button
@@ -591,6 +650,14 @@ function WorkflowBuilder({ onNodeSelected, onNodeConfigChange }) {
           />
         </div>
       </div>
+
+      {isAgentRunning && (
+        <div className="bg-gray-800 text-white p-4 text-sm overflow-y-auto h-48">
+          {logs.map((log, index) => (
+            <div key={index}>{log}</div>
+          ))}
+        </div>
+      )}
 
       <div className="flex flex-1 h-full">
         {/* <Sidebar /> */}

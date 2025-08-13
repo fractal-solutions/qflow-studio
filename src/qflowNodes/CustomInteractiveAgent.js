@@ -5,6 +5,19 @@ import { CustomAgent } from './custom/agent.js';
 export class CustomInteractiveAgent extends AsyncNode {
     constructor(maxRetries = 3, wait = 2) {
         super(maxRetries, wait);
+        this.isStopped = false;
+        this.log = console.log;
+    }
+
+    setLogFunction(log) {
+        this.log = log;
+    }
+
+    stop() {
+        this.isStopped = true;
+        if (this.agent) {
+            this.agent.stop();
+        }
     }
 
     async execAsync() {
@@ -145,14 +158,14 @@ export class CustomInteractiveAgent extends AsyncNode {
         // For now, summarization LLM is the same as agent LLM
         const summarizeLLM = agentLLM; 
 
-        const agent = new CustomAgent(agentLLM, availableTools, summarizeLLM);
-        agent.setParams({ goal, maxIterations, systemPrompt });
+        this.agent = new CustomAgent(agentLLM, availableTools, summarizeLLM, this.log);
+        this.agent.setParams({ goal, maxIterations, systemPrompt });
         
         // Ensure the agent has access to the available tools for prompt building
-        agent.availableTools = availableTools;
+        this.agent.availableTools = availableTools;
 
         console.log('[CustomInteractiveAgent] Running agent with goal:', goal);
-        const result = await agent.execAsync();
+        const result = await this.agent.execAsync();
         console.log('[CustomInteractiveAgent] Agent finished with result:', result);
 
         return result;

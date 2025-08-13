@@ -8,6 +8,9 @@ import { CustomLLMNode } from './src/qflowNodes/CustomLLMNode.js';
 import { CustomAgentNode } from './src/qflowNodes/CustomAgentNode.js';
 import { CustomInteractiveAgent } from './src/qflowNodes/CustomInteractiveAgent.js';
 import { registerWebhook } from './webhookRegistry.js';
+import crypto from 'crypto';
+
+const activeWorkflows = new Map();
 
 
 // Helper function to get a nested property from an object
@@ -132,7 +135,16 @@ const nodeMap = {
   CustomInteractiveAgent,
 };
 
-export const executeWorkflow = async (nodes, edges) => {
+export const executeWorkflow = async (nodes, edges, clients, workflowId) => {
+  const log = (message) => {
+    if (clients && clients.has(workflowId)) {
+      clients.get(workflowId).send(JSON.stringify({ type: 'log', message }));
+    }
+    console.log(`[Workflow ${workflowId}] ${message}`);
+  };
+
+  log('Workflow execution started.');
+
   console.log('WorkflowExecutor: Received nodes:', nodes);
   console.log('WorkflowExecutor: Received edges:', edges);
   if (!nodes || nodes.length === 0) {
@@ -162,8 +174,11 @@ export const executeWorkflow = async (nodes, edges) => {
     }
 
     const NodeClass = nodeMap[node.type];
-    if (NodeClass) {
-      const flowNode = new NodeClass();
+      if (NodeClass) {
+        const flowNode = new NodeClass();
+        if (node.type === 'CustomInteractiveAgent') {
+          flowNode.setLogFunction(log);
+        }
       flowNode.id = node.id;
       flowNode.type = node.type;
       // Store original structured parameters for potential later use (e.g., saving back to UI)
@@ -401,14 +416,34 @@ export const executeWorkflow = async (nodes, edges) => {
   }
   const flow = new AsyncFlow(startNode);
 
+  // Find the agent node to be able to stop it
+  const agentNode = Object.values(flowNodes).find(node => node instanceof CustomInteractiveAgent);
+
+  activeWorkflows.set(workflowId, { flow, agent: agentNode });
+
   try {
-    console.log('Running workflow...');
+    console.log(`Running workflow ${workflowId}...`);
     let result = await flow.runAsync({});
-    console.log('Workflow finished:', result);
-    return { success: true, result, isWebhookFlow: false };
+    console.log(`Workflow ${workflowId} finished:`, result);
+    return { success: true, result, workflowId, isWebhookFlow: false };
   } catch (error) {
-    console.error('Workflow failed:', error);
-    return { success: false, error: error.message };
+    console.error(`Workflow ${workflowId} failed:`, error);
+    return { success: false, error: error.message, workflowId };
+  } finally {
+    activeWorkflows.delete(workflowId);
+  }
+};
+
+export const stopWorkflow = (workflowId) => {
+  const workflow = activeWorkflows.get(workflowId);
+  if (workflow) {
+    if (workflow.agent) {
+      workflow.agent.stop();
+    }
+    activeWorkflows.delete(workflowId);
+    return { success: true, message: `Workflow ${workflowId} stopped.` };
+  } else {
+    return { success: false, message: `Workflow ${workflowId} not found.` };
   }
 };
 

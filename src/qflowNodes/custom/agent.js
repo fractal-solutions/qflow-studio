@@ -2,18 +2,20 @@ import { AsyncNode } from '@fractal-solutions/qflow';
 import { InteractiveInputNode } from '@fractal-solutions/qflow/nodes';
 
 export class CustomAgent extends AsyncNode {
-    constructor(llmNode, availableTools = {}, summarizeLLM = null, flowRegistry = {}) {
+    constructor(llmNode, availableTools = {}, summarizeLLM = null, log = console.log) {
         super();
         this.llmNode = llmNode;
         this.availableTools = availableTools;
         this.summarizeLLM = summarizeLLM || llmNode;
-        this.flowRegistry = flowRegistry;
+        this.log = log;
+        this.flowRegistry = {};
         this.maxIterations = 10;
         this.goal = '';
         this.systemPrompt = '';
         this.conversationHistory = [];
         this.iterationCount = 0;
         this.finalOutput = '';
+        this.isStopped = false;
         
         // Create interactive input node for confirmation
         this.confirmationNode = new InteractiveInputNode();
@@ -31,20 +33,24 @@ export class CustomAgent extends AsyncNode {
         super.setParams(params);
     }
 
+    stop() {
+        this.isStopped = true;
+    }
+
     async execAsync() {
-        console.log(`[CustomAgent] Running agent with goal: ${this.goal}`);
+        this.log(`[CustomAgent] Running agent with goal: ${this.goal}`);
         
         this.iterationCount = 0;
         this.conversationHistory = [];
         
         // Initialize conversation with system prompt and goal
         const initialPrompt = this.buildInitialPrompt();
-        console.log('[CustomAgent] Initial prompt:', initialPrompt);
+        this.log('[CustomAgent] Initial prompt:', initialPrompt);
         this.conversationHistory.push({ role: 'system', content: initialPrompt });
         
-        while (this.iterationCount < this.maxIterations) {
+        while (this.iterationCount < this.maxIterations && !this.isStopped) {
             this.iterationCount++;
-            console.log(`[INFO] Agent Step ${this.iterationCount}`);
+            this.log(`[INFO] Agent Step ${this.iterationCount}`);
             
             try {
                 // Get agent reasoning and tool calls
@@ -54,7 +60,7 @@ export class CustomAgent extends AsyncNode {
                     // Agent wants to finish
                     if (agentResponse && agentResponse.final_output) {
                         this.finalOutput = agentResponse.final_output;
-                        console.log(`🎉 Final Output\n${this.finalOutput}`);
+                        this.log(`🎉 Final Output\n${this.finalOutput}`);
                         return this.finalOutput;
                     }
                     break;
@@ -68,7 +74,7 @@ export class CustomAgent extends AsyncNode {
                 this.conversationHistory.push({ role: 'user', content: JSON.stringify(toolResults) });
                 
             } catch (error) {
-                console.error(`❌ Error\n${error.message}`);
+                this.log(`❌ Error\n${error.message}`);
                 this.conversationHistory.push({ 
                     role: 'user', 
                     content: `Error: ${error.message}. Please try again or provide a different approach.` 
@@ -78,7 +84,7 @@ export class CustomAgent extends AsyncNode {
         
         if (this.iterationCount >= this.maxIterations) {
             const errorMsg = `Agent reached max steps without finishing. Last observation: ${JSON.stringify(this.conversationHistory[this.conversationHistory.length - 1])}`;
-            console.log(`❌ Error\n${errorMsg}`);
+            this.log(`❌ Error\n${errorMsg}`);
             return errorMsg;
         }
         
@@ -459,10 +465,10 @@ Parameters: ${params}`;
                 toolInstance.setParams(parameters);
                 const result = await toolInstance.execAsync();
                 results.push({ tool, result });
-                console.log(`✅ Tool Result\nTool: ${tool}\nResult: ${JSON.stringify(result)}`);
+                this.log(`✅ Tool Result\nTool: ${tool}\nResult: ${JSON.stringify(result)}`);
             } catch (error) {
                 results.push({ tool, error: error.message });
-                console.log(`❌ Tool Error\nTool: ${tool}\nError: ${error.message}`);
+                this.log(`❌ Tool Error\nTool: ${tool}\nError: ${error.message}`);
             }
         }
         
@@ -470,7 +476,7 @@ Parameters: ${params}`;
     }
 
     async confirmFinish(message) {
-        console.log(`Agent proposes to finish with output: "${message}". Do you approve? (yes/no): `);
+        this.log(`Agent proposes to finish with output: "${message}". Do you approve? (yes/no): `);
         
         // Use interactive input for confirmation
         this.confirmationNode.setParams({
