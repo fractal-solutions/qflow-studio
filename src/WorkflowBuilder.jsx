@@ -633,6 +633,69 @@ function WorkflowBuilder({ onNodeSelected, onNodeConfigChange }) {
     }
   }, [activeWebhookNodeId, setNodes, showAlert]); // Dependencies
 
+  const onStopWorkflow = useCallback(async () => {
+    if (workflowId) {
+      // Stop agent/general workflow
+      try {
+        const response = await fetch('http://localhost:3000/stop-agent', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ workflowId }),
+        });
+        const data = await response.json();
+        if (data.success) {
+          showAlert('Success', 'Workflow stopped successfully!', 'success');
+        } else {
+          showAlert('Error', `Failed to stop workflow: ${data.error}`, 'error');
+        }
+      } catch (error) {
+        showAlert('Error', `Error stopping workflow: ${error.message}`, 'error');
+      }
+    } else if (activeWebhookNodeId) {
+      // Stop webhook
+      try {
+        const response = await fetch('http://localhost:3000/stop-webhook', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ webhookId: activeWebhookNodeId }),
+        });
+        const data = await response.json();
+        if (data.success) {
+          showAlert('Success', data.message, 'success');
+          setNodes((nds) =>
+            nds.map((node) => {
+              if (node.id === activeWebhookNodeId) {
+                return {
+                  ...node,
+                  style: {
+                    ...node.style,
+                    border: '2px solid var(--color-primary)', // Reset to default border
+                    boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)', // Reset to default shadow
+                  },
+                };
+              }
+              return node;
+            })
+          );
+          setActiveWebhookNodeId(null);
+        } else {
+          showAlert('Error', `Failed to stop webhook: ${data.error}`, 'error');
+        }
+      } catch (error) {
+        showAlert('Error', `Error stopping webhook: ${error.message}`, 'error');
+      }
+    }
+    setIsRunning(false);
+    resetAllNodeStyles();
+    if (ws.current) {
+      ws.current.close();
+    }
+  }, [workflowId, activeWebhookNodeId, setNodes, showAlert, resetAllNodeStyles]);
+
   const handleNodeClick = (event, node) => {
     setNodeToConfigure(node);
     setShowModal(true);
@@ -679,29 +742,16 @@ function WorkflowBuilder({ onNodeSelected, onNodeConfigChange }) {
         </div>
         <div className="flex items-center space-x-4">
           <button
-            onClick={isAgentRunning ? onStop : onRun}
+            onClick={isRunning ? onStopWorkflow : onRun}
             className={`flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition-colors ${
-              isRunning || isAgentRunning
+              isRunning
                 ? 'bg-[var(--color-error)]/10 text-[var(--color-error)] hover:bg-[var(--color-error)]/20 border border-[var(--color-error)]/20'
                 : 'bg-[var(--color-success)]/10 text-[var(--color-success)] hover:bg-[var(--color-success)]/20 border border-[var(--color-success)]/20'
             }`}
           >
-            {isAgentRunning ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-            <span>{isAgentRunning ? 'Stop Agent' : 'Run'}</span>
+            {isRunning ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+            <span>{isRunning ? 'Stop' : 'Run'}</span>
           </button>
-          {activeWebhookNodeId && ( // Conditionally render stop button for active webhook
-            <button
-              onClick={onStopWebhook}
-              className={`flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition-colors ${
-                isRunning
-                  ? 'bg-[var(--color-error)]/10 text-[var(--color-error)] hover:bg-[var(--color-error)]/20 border border-[var(--color-error)]/20'
-                  : 'bg-[var(--color-error)]/10 text-[var(--color-error)] hover:bg-[var(--color-error)]/20 border border-[var(--color-error)]/20'
-              }`}
-            >
-              <Pause className="w-4 h-4" />
-              <span>Stop Webhook</span>
-            </button>
-          )}
           <button
             onClick={onSave}
             className="flex items-center space-x-2 px-4 py-2 bg-[var(--color-primary)] text-white rounded-lg hover:bg-[var(--color-primaryHover)] transition-colors font-medium"
