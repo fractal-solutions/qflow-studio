@@ -8,7 +8,7 @@ import ReactFlow, {
   addEdge,
   ReactFlowProvider,
 } from 'react-flow-renderer';
-import { Save, Play, Pause, Download, Upload } from 'lucide-react';
+import { Save, Play, Pause, Download, Upload, Terminal } from 'lucide-react';
 import { useTheme } from './contexts/ThemeContext.jsx';
 import AlertDialog from './components/AlertDialog.jsx';
 import PromptDialog from './components/PromptDialog.jsx';
@@ -142,8 +142,16 @@ function WorkflowBuilder({ onNodeSelected, onNodeConfigChange }) {
   const [isRunning, setIsRunning] = useState(false);
   const [workflowId, setWorkflowId] = useState(null);
   const [isAgentRunning, setIsAgentRunning] = useState(false);
+  const [isLogOpen, setIsLogOpen] = useState(false);
   const [logs, setLogs] = useState([]);
   const ws = useRef(null);
+  const logContainerRef = useRef(null);
+
+  useEffect(() => {
+    if (logContainerRef.current) {
+      logContainerRef.current.scrollTop = logContainerRef.current.scrollHeight;
+    }
+  }, [logs]);
 
   // Define the onInit callback here, within the WorkflowBuilder component
   const onInit = useCallback((instance) => {
@@ -665,18 +673,10 @@ function WorkflowBuilder({ onNodeSelected, onNodeConfigChange }) {
         </div>
       </div>
 
-      {isAgentRunning && (
-        <div className="bg-gray-800 text-white p-4 text-sm overflow-y-auto h-48">
-          {logs.map((log, index) => (
-            <div key={index}>{log}</div>
-          ))}
-        </div>
-      )}
-
       <div className="flex flex-1 h-full">
         {/* <Sidebar /> */}
         <div
-          className="flex-1 h-full"
+          className="flex-1 h-full relative"
           ref={reactFlowWrapper}
           onKeyDown={useCallback((event) => {
             if (showModal && (event.key === 'Backspace' || event.key === 'Delete')) {
@@ -724,6 +724,17 @@ function WorkflowBuilder({ onNodeSelected, onNodeConfigChange }) {
                     <Background color="var(--color-border)" gap={20} />
                 </ReactFlow>
             </ReactFlowProvider>
+            <div ref={logContainerRef} className={`absolute bottom-4 left-1/2 transform -translate-x-1/2 w-1/2 bg-gray-800 text-white p-4 text-sm overflow-y-auto rounded-lg shadow-lg border border-gray-700 z-50 transition-all duration-300 ${isLogOpen ? 'h-48' : 'h-0 p-0 border-0'}`}>
+                {logs.map((log, index) => (
+                  <div key={index}>{log}</div>
+                ))}
+            </div>
+            <button
+              onClick={() => setIsLogOpen(!isLogOpen)}
+              className="absolute bottom-4 left-1/2 transform -translate-x-1/2 p-3 rounded-full bg-gray-800 bg-opacity-75 text-white shadow-lg z-50"
+            >
+              <Terminal className="w-6 h-6" />
+            </button>
         </div>
       </div>
       {showModal && nodeToConfigure && (

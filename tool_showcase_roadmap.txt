@@ -1,0 +1,4 @@
+1. Create roadmap document
+2. Store roadmap in semantic memory
+3. Notify user
+4. Get user feedback
