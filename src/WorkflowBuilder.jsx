@@ -647,21 +647,21 @@ function WorkflowBuilder({ onNodeSelected, onNodeConfigChange }) {
             className="flex items-center space-x-2 px-4 py-2 bg-[var(--color-primary)] text-white rounded-lg hover:bg-[var(--color-primaryHover)] transition-colors font-medium"
           >
             <Save className="w-4 h-4" />
-            <span>Save Workflow</span>
+            <span>Save</span>
           </button>
           <button
             onClick={onExport} // New Export button
             className="flex items-center space-x-2 px-4 py-2 bg-[var(--color-secondary)] text-white rounded-lg hover:bg-[var(--color-secondaryHover)] transition-colors font-medium"
           >
             <Download className="w-4 h-4" />
-            <span>Export Workflow</span>
+            <span>Export</span>
           </button>
           <button
             onClick={() => document.getElementById('import-workflow-input').click()} // Trigger hidden file input
             className="flex items-center space-x-2 px-4 py-2 bg-[var(--color-tertiary)] text-white rounded-lg hover:bg-[var(--color-tertiaryHover)] transition-colors font-medium"
           >
             <Upload className="w-4 h-4" />
-            <span>Import Workflow</span>
+            <span>Import</span>
           </button>
           <input
             type="file"
@@ -725,9 +725,21 @@ function WorkflowBuilder({ onNodeSelected, onNodeConfigChange }) {
                 </ReactFlow>
             </ReactFlowProvider>
             <div ref={logContainerRef} className={`absolute bottom-4 left-1/2 transform -translate-x-1/2 w-1/2 bg-gray-800 text-white p-4 text-sm overflow-y-auto rounded-lg shadow-lg border border-gray-700 z-50 transition-all duration-300 ${isLogOpen ? 'h-48' : 'h-0 p-0 border-0'}`}>
-                {logs.map((log, index) => (
-                  <div key={index}>{log}</div>
-                ))}
+                {logs.map((log, index) => {
+                  let textColorClass = 'text-white'; // Default color
+                  if (log.toLowerCase().includes('error') || log.toLowerCase().includes('failed')) {
+                    textColorClass = 'text-red-400';
+                  } else if (log.toLowerCase().includes('warn') || log.toLowerCase().includes('warning')) {
+                    textColorClass = 'text-yellow-400';
+                  } else if (log.toLowerCase().includes('success') || log.toLowerCase().includes('finished')) {
+                    textColorClass = 'text-green-400';
+                  }
+                  return (
+                    <div key={index} className={`py-1 border-b border-gray-700 last:border-b-0 ${textColorClass}`}>
+                      {log}
+                    </div>
+                  );
+                })}
             </div>
             <button
               onClick={() => setIsLogOpen(!isLogOpen)}

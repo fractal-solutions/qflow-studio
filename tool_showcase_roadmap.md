@@ -1,9 +1,7 @@
 # Tool Showcase Roadmap
 
-1. Create demonstration plan
-2. Store plan in semantic memory
-3. Notify user of progress
-4. Demonstrate interactive input
-5. Show web search capability
-6. Execute sample code
-7. Complete demonstration
+1. Demonstrate file operations (read/write)
+2. Show web search capabilities
+3. Execute simple shell command
+4. Store roadmap in semantic memory
+5. Notify user of progress
