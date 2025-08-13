@@ -1,4 +1,6 @@
-import { AsyncNode, AgentNode, AgentDeepSeekLLMNode, AgentOpenAILLMNode, AgentGeminiLLMNode, AgentOllamaLLMNode, AgentHuggingFaceLLMNode, AgentOpenRouterLLMNode, DuckDuckGoSearchNode, ShellCommandNode, ReadFileNode, WriteFileNode, HttpRequestNode, ScrapeURLNode, UserInputNode, SemanticMemoryNode, TransformNode, CodeInterpreterNode, SubFlowNode, IteratorNode, InteractiveInputNode, SystemNotificationNode, BrowserControlNode, AppendFileNode, MemoryNode, GoogleSearchNode, WebSocketsNode, DataExtractorNode, PDFProcessorNode, SpreadsheetNode, DataValidationNode, GitNode, GitHubNode, GISNode, DisplayImageNode, ImageGalleryNode, HardwareInteractionNode, SpeechSynthesisNode, MultimediaProcessingNode, RemoteExecutionNode, StripeNode, HackerNewsNode } from '@fractal-solutions/qflow';
+import { AsyncNode } from '@fractal-solutions/qflow';
+import { AgentNode, AgentDeepSeekLLMNode, AgentOpenAILLMNode, AgentGeminiLLMNode, AgentOllamaLLMNode, AgentHuggingFaceLLMNode, AgentOpenRouterLLMNode, DuckDuckGoSearchNode, ShellCommandNode, ReadFileNode, WriteFileNode, HttpRequestNode, ScrapeURLNode, UserInputNode, SemanticMemoryNode, TransformNode, CodeInterpreterNode, SubFlowNode, IteratorNode, InteractiveInputNode, SystemNotificationNode, BrowserControlNode, AppendFileNode, MemoryNode, GoogleSearchNode, DataExtractorNode, PDFProcessorNode, SpreadsheetNode, DataValidationNode, GISNode, DisplayImageNode, ImageGalleryNode, HardwareInteractionNode, SpeechSynthesisNode, MultimediaProcessingNode, RemoteExecutionNode } from '@fractal-solutions/qflow/nodes';
+
 
 export class CustomAgentNode extends AsyncNode {
     constructor(maxRetries = 3, wait = 2) {
@@ -64,13 +66,10 @@ export class CustomAgentNode extends AsyncNode {
             AppendFileNode: AppendFileNode,
             MemoryNode: MemoryNode,
             GoogleSearchNode: GoogleSearchNode,
-            WebSocketsNode: WebSocketsNode,
             DataExtractorNode: DataExtractorNode,
             PDFProcessorNode: PDFProcessorNode,
             SpreadsheetNode: SpreadsheetNode,
             DataValidationNode: DataValidationNode,
-            GitNode: GitNode,
-            GitHubNode: GitHubNode,
             GISNode: GISNode,
             DisplayImageNode: DisplayImageNode,
             ImageGalleryNode: ImageGalleryNode,
@@ -78,13 +77,13 @@ export class CustomAgentNode extends AsyncNode {
             SpeechSynthesisNode: SpeechSynthesisNode,
             MultimediaProcessingNode: MultimediaProcessingNode,
             RemoteExecutionNode: RemoteExecutionNode,
-            StripeNode: StripeNode,
-            HackerNewsNode: HackerNewsNode,
         };
 
         if (tools && Array.isArray(tools)) {
             tools.forEach(toolName => {
                 if (toolMap[toolName]) {
+                    // Instantiate the tool and pass relevant parameters if needed
+                    // For now, assuming tools don't need specific parameters at instantiation
                     availableTools[toolName.replace('Node', '').toLowerCase()] = new toolMap[toolName]();
                 } else {
                     console.warn(`Tool ${toolName} not found or supported.`);

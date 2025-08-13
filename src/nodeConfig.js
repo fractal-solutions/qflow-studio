@@ -1,3 +1,5 @@
+import { DEFAULT_AGENT_SYSTEM_PROMPT } from './constants/agentPrompts';
+
 export const nodeConfig = {
   ReadFileNode: {
     fields: [
@@ -72,7 +74,7 @@ export const nodeConfig = {
       { name: 'apiKey', type: 'text', label: 'API Key' },
       { name: 'model', type: 'text', label: 'Model' },
       { name: 'baseUrl', type: 'text', label: 'Base URL (for Ollama/HuggingFace)' },
-      { name: 'systemPrompt', type: 'textarea', label: 'Agent System Prompt' },
+      { name: 'systemPrompt', type: 'textarea', label: 'Agent System Prompt', defaultValue: DEFAULT_AGENT_SYSTEM_PROMPT },
       { name: 'goal', type: 'textarea', label: 'Agent Goal' },
       { name: 'tools', type: 'multiselect', label: 'Available Tools', options: [
         'DuckDuckGoSearchNode', 'ShellCommandNode', 'ReadFileNode', 'WriteFileNode', 'HttpRequestNode',

@@ -5,6 +5,7 @@ import { SharedStateReaderNode } from './src/qflowNodes/SharedStateReaderNode.js
 import { SharedStateWriterNode } from './src/qflowNodes/SharedStateWriterNode.js';
 import { BranchNode } from './src/qflowNodes/BranchNode.js';
 import { CustomLLMNode } from './src/qflowNodes/CustomLLMNode.js';
+import { CustomAgentNode } from './src/qflowNodes/CustomAgentNode.js';
 import { registerWebhook } from './webhookRegistry.js';
 
 
@@ -126,6 +127,7 @@ const nodeMap = {
   SharedStateWriterNode,
   BranchNode,
   CustomLLMNode,
+  CustomAgentNode,
 };
 
 export const executeWorkflow = async (nodes, edges) => {

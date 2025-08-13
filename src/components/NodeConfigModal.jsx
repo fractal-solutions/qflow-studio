@@ -105,43 +105,52 @@ const NodeConfigModal = ({ node, onConfigChange, onClose, onDeleteNode, activeWe
     }
 
     // Initialize parameters that can be sourced from shared state with default structure
-    // This prevents errors when accessing .type on undefined
-    if (schema) { // Ensure schema exists for the node type
-      Object.entries(schema).forEach(([key, config]) => {
-        // Only apply static/shared wrapping to text and textarea types, and not to select types
-        if ((config.type === 'text' || config.type === 'textarea') &&
-            node.type !== 'CustomLLMNode' && // Exclude CustomLLMNode from this wrapping
-            (displayNodeData[key] === undefined || typeof displayNodeData[key] !== 'object' || displayNodeData[key].type === undefined)) {
-          displayNodeData[key] = { type: 'static', value: displayNodeData[key] || '' };
+        // This prevents errors when accessing .type on undefined
+        if (schema) { // Ensure schema exists for the node type
+            Object.entries(schema).forEach(([key, config]) => {
+                // Apply defaultValue if the field is not already set
+                if (displayNodeData[key] === undefined && config.defaultValue !== undefined) {
+                    displayNodeData[key] = config.defaultValue;
+                }
+
+                // Only apply static/shared wrapping to text and textarea types, and not to select types
+                if ((config.type === 'text' || config.type === 'textarea') &&
+                    node.type !== 'CustomLLMNode' && // Exclude CustomLLMNode from this wrapping
+                    (displayNodeData[key] === undefined || typeof displayNodeData[key] !== 'object' || displayNodeData[key].type === undefined)) {
+                    displayNodeData[key] = { type: 'static', value: displayNodeData[key] || '' };
+                }
+                // For CustomLLMNode, ensure prompt is a simple string
+                if (node.type === 'CustomLLMNode' && key === 'prompt' && typeof displayNodeData[key] !== 'string') {
+                    displayNodeData[key] = displayNodeData[key]?.value || '';
+                }
+                // For CustomAgentNode, ensure specific fields are simple strings
+                if (node.type === 'CustomAgentNode' && ['apiKey', 'model', 'baseUrl', 'systemPrompt', 'goal'].includes(key) && typeof displayNodeData[key] !== 'string') {
+                    displayNodeData[key] = displayNodeData[key]?.value || '';
+                }
+                if (config.type === 'select' && (displayNodeData[key] === undefined || displayNodeData[key] === null)) {
+                    displayNodeData[key] = ''; // Ensure select fields have a default empty string value
+                }
+                // For JSON fields, initialize rawJsonInputs with stringified value
+                if (config.type === 'json') {
+                    let jsonValueToDisplay = displayNodeData[key]?.value;
+                    // If the value is a string, try to parse it first
+                    if (typeof jsonValueToDisplay === 'string') {
+                        try {
+                            jsonValueToDisplay = JSON.parse(jsonValueToDisplay);
+                        } catch (e) {
+                            console.warn(`Could not parse stringified JSON for ${key} during display initialization. Using raw string.`, e);
+                            // If parsing fails, keep it as a string, it will be validated on save
+                        }
+                    }
+                    try {
+                        initialRawJsonInputs[key] = JSON.stringify(jsonValueToDisplay || {}, null, 2);
+                    } catch (e) {
+                        console.error(`Error stringifying JSON for ${key}:`, e);
+                        initialRawJsonInputs[key] = '{}'; // Fallback to empty object string
+                    }
+                }
+            });
         }
-        // For CustomLLMNode, ensure prompt is a simple string
-        if (node.type === 'CustomLLMNode' && key === 'prompt' && typeof displayNodeData[key] !== 'string') {
-          displayNodeData[key] = displayNodeData[key]?.value || '';
-        }
-        if (config.type === 'select' && (displayNodeData[key] === undefined || displayNodeData[key] === null)) {
-          displayNodeData[key] = ''; // Ensure select fields have a default empty string value
-        }
-        // For JSON fields, initialize rawJsonInputs with stringified value
-        if (config.type === 'json') {
-          let jsonValueToDisplay = displayNodeData[key]?.value;
-          // If the value is a string, try to parse it first
-          if (typeof jsonValueToDisplay === 'string') {
-            try {
-              jsonValueToDisplay = JSON.parse(jsonValueToDisplay);
-            } catch (e) {
-              console.warn(`Could not parse stringified JSON for ${key} during display initialization. Using raw string.`, e);
-              // If parsing fails, keep it as a string, it will be validated on save
-            }
-          }
-          try {
-            initialRawJsonInputs[key] = JSON.stringify(jsonValueToDisplay || {}, null, 2);
-          } catch (e) {
-            console.error(`Error stringifying JSON for ${key}:`, e);
-            initialRawJsonInputs[key] = '{}'; // Fallback to empty object string
-          }
-        }
-      });
-    }
 
     // Special handling for CustomLLMNode to apply provider presets on initial load
     if (node.type === 'CustomLLMNode' && displayNodeData.provider) {
@@ -159,6 +168,22 @@ const NodeConfigModal = ({ node, onConfigChange, onClose, onDeleteNode, activeWe
           displayNodeData.requestBody = defaultRequestBody; // Store as object for internal use
         }
       }
+    }
+
+    // Special handling for CustomAgentNode to apply provider presets on initial load
+    if (node.type === 'CustomAgentNode' && displayNodeData.provider) {
+      const provider = displayNodeData.provider;
+      const config = CustomLLMNode.providerConfigs[provider]; // Re-using CustomLLMNode's provider configs
+      if (config) {
+        if (!displayNodeData.model) displayNodeData.model = config.defaultModel;
+        if (!displayNodeData.apiKey && config.apiKeyRequired) displayNodeData.apiKey = ''; // Ensure apiKey is present if required
+        if (!displayNodeData.baseUrl && typeof config.apiUrl === 'function') displayNodeData.baseUrl = ''; // Ensure baseUrl is present if apiUrl is a function
+      }
+    }
+
+    // Ensure tools is an array for CustomAgentNode
+    if (node.type === 'CustomAgentNode' && (!displayNodeData.tools || !Array.isArray(displayNodeData.tools))) {
+      displayNodeData.tools = [];
     }
 
     setNodeData(displayNodeData);
@@ -204,6 +229,25 @@ const NodeConfigModal = ({ node, onConfigChange, onClose, onDeleteNode, activeWe
         return updatedData;
       }
 
+      // Special handling for CustomAgentNode provider change
+      if (node.type === 'CustomAgentNode' && name === 'provider') {
+        const selectedProvider = newParamValue;
+        const config = CustomLLMNode.providerConfigs[selectedProvider]; // Re-using CustomLLMNode's provider configs
+        let updatedData = { ...prevData, [name]: selectedProvider };
+
+        if (config) {
+          updatedData.model = config.defaultModel;
+          updatedData.apiKey = config.apiKeyRequired ? (updatedData.apiKey || '') : ''; // Clear apiKey if not required
+          updatedData.baseUrl = typeof config.apiUrl === 'function' ? (updatedData.baseUrl || '') : ''; // Clear baseUrl if not a function-based URL
+        } else {
+          // Clear fields if no provider selected or provider not found
+          updatedData.model = '';
+          updatedData.apiKey = '';
+          updatedData.baseUrl = '';
+        }
+        return updatedData;
+      }
+
       // For parameters that can be sourced from shared state
       if (name.endsWith('_sourceType')) {
         const paramName = name.replace('_sourceType', '');
@@ -236,6 +280,12 @@ const NodeConfigModal = ({ node, onConfigChange, onClose, onDeleteNode, activeWe
             value: newParamValue,
             type: 'static' // Explicitly set type to 'static'
           }
+        };
+      } else if (node.type === 'CustomAgentNode' && ['apiKey', 'model', 'baseUrl', 'systemPrompt', 'goal'].includes(name)) {
+        // For CustomAgentNode's specific fields, directly update the value as a string
+        return {
+          ...prevData,
+          [name]: newParamValue
         };
       } else {
         // For other types (number, select, json, boolean directly)
@@ -421,7 +471,8 @@ const NodeConfigModal = ({ node, onConfigChange, onClose, onDeleteNode, activeWe
               </label>
               {config.type === 'text' && (
                 <>
-                  {node.type === 'CustomLLMNode' && ['apiUrl', 'apiKey', 'model', 'prompt', 'responsePath', 'baseUrl'].includes(key) ? (
+                  {((node.type === 'CustomLLMNode' && ['apiUrl', 'apiKey', 'model', 'prompt', 'responsePath', 'baseUrl'].includes(key)) ||
+                    (node.type === 'CustomAgentNode' && ['apiKey', 'model', 'baseUrl'].includes(key))) ? (
                     <input
                       type="text"
                       id={key}
@@ -496,7 +547,8 @@ const NodeConfigModal = ({ node, onConfigChange, onClose, onDeleteNode, activeWe
               )}
               {config.type === 'textarea' && (
                 <>
-                  {node.type === 'CustomLLMNode' && key === 'prompt' ? (
+                  {((node.type === 'CustomLLMNode' && key === 'prompt') ||
+                    (node.type === 'CustomAgentNode' && ['systemPrompt', 'goal'].includes(key))) ? (
                     <textarea
                       id={key}
                       name={key}
@@ -575,6 +627,23 @@ const NodeConfigModal = ({ node, onConfigChange, onClose, onDeleteNode, activeWe
                   value={nodeData[key] || ''}
                   onChange={handleChange}
                   className="w-full p-2.5 border border-[var(--color-border)] rounded-md bg-[var(--color-background)] text-[var(--color-text)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent transition-all duration-200"
+                >
+                  {config.options.map(option => (
+                    <option key={option} value={option}>{option}</option>
+                  ))}
+                </select>
+              )}
+              {config.type === 'multiselect' && (
+                <select
+                  id={key}
+                  name={key}
+                  multiple={true}
+                  value={nodeData[key] || []}
+                  onChange={(e) => {
+                    const selectedOptions = Array.from(e.target.selectedOptions).map(option => option.value);
+                    setNodeData(prevData => ({ ...prevData, [key]: selectedOptions }));
+                  }}
+                  className="w-full p-2.5 border border-[var(--color-border)] rounded-md bg-[var(--color-background)] text-[var(--color-text)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent transition-all duration-200 h-32"
                 >
                   {config.options.map(option => (
                     <option key={option} value={option}>{option}</option>
