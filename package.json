@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@fractal-solutions/qflow": "^1.0.41",
+    "@monaco-editor/react": "^4.7.0",
     "cors": "^2.8.5",
     "express": "^5.1.0",
     "lucide-react": "^0.344.0",
@@ -24,9 +25,9 @@
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-flow-renderer": "latest",
+    "uuid": "^9.0.1",
     "vite-plugin-commonjs": "^0.10.4",
-    "ws": "^8.17.0",
-    "uuid": "^9.0.1"
+    "ws": "^8.17.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.9.1",

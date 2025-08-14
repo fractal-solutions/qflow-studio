@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
+import { Editor } from '@monaco-editor/react';
+import { useTheme } from '../contexts/ThemeContext';
 import nodeConfigSchemas from '../nodeConfigSchemas';
 import { Save, Pause, X, Trash2, FileText, Terminal, Globe, BrainCircuit, Cpu, Database, Share2, GitMerge, Bot, MessageSquare, Sliders, Code, Search, File, Image, CreditCard, Rss, HardDrive, Server, GitBranch, ChevronsLeft, ChevronsRight, ChevronDown, ChevronUp, Play } from 'lucide-react'; // Import all necessary icons
 import ConfirmationDialog from './ConfirmationDialog'; // Import ConfirmationDialog
 import { CustomLLMNode } from '../qflowNodes/CustomLLMNode.js'; // Import CustomLLMNode to access providerConfigs
+
 
 // Map node types to their corresponding Lucide icons
 export const nodeIcons = {
@@ -67,6 +70,7 @@ export const nodeIcons = {
 
 
 const NodeConfigModal = ({ node, onConfigChange, onClose, onDeleteNode, activeWebhookNodeId, onStopWebhook }) => {
+  const { isDarkMode } = useTheme();
   const [nodeData, setNodeData] = useState(node.data);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [isExecuting, setIsExecuting] = useState(false);
@@ -618,11 +622,13 @@ const NodeConfigModal = ({ node, onConfigChange, onClose, onDeleteNode, activeWe
                         <textarea
                           id={`${key}_staticValue`}
                           name={`${key}_staticValue`}
-                          value={nodeData[key]?.value || ''}
-                          onChange={handleChange}
-                          placeholder={config.placeholder || ''}
+                          value={rawJsonInputs[key] || ''} // Use rawJsonInputs for display
+                          onChange={(e) => {
+                            setRawJsonInputs(prev => ({ ...prev, [key]: e.target.value })); // Update raw input
+                            setJsonErrors(prevErrors => ({ ...prevErrors, [key]: false })); // Clear error on typing
+                          }}
                           rows={config.rows || 3}
-                          className="w-full p-2.5 border border-[var(--color-border)] rounded-md bg-[var(--color-background)] text-[var(--color-text)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent transition-all duration-200"
+                          className="w-full p-2.5 border border-[var(--color-border)] rounded-md bg-[var(--color-background)] text-[var(--color-text)] font-mono text-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent transition-all duration-200"
                         />
                       )}
                       {nodeData[key]?.type === 'shared' && (
@@ -633,7 +639,7 @@ const NodeConfigModal = ({ node, onConfigChange, onClose, onDeleteNode, activeWe
                           value={nodeData[key]?.value || ''}
                           onChange={handleChange}
                           placeholder="e.g., my_data.result or apiResponse.body"
-                          className="w-full p-2.5 border border-[var(--color-border)] rounded-md bg-[var(--color-background)] text-[var(--color-text)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent transition-all duration-200"
+                          className="w-full p-2.5 border border-[var(--color-border)] rounded-md bg-[var(--color-background)] text-[var(--color-text)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus->border-transparent transition-all duration-200"
                         />
                       )}
                     </div>
@@ -789,42 +795,101 @@ const NodeConfigModal = ({ node, onConfigChange, onClose, onDeleteNode, activeWe
           {!schema && (
             <p className="text-[var(--color-textSecondary)]">No configurable parameters for this node type.</p>
           )}
-        </div>
+          {(node.type === 'Node' || node.type === 'AsyncNode') && (
+            <div className="space-y-4">
+              <div className="p-4 bg-[var(--color-surface-hover)] rounded-lg">
+                <h4 className="font-bold mb-2 text-[var(--color-text)]">Available Libraries</h4>
+                <ul className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm text-[var(--color-textSecondary)]">
+                  <li><code className="font-mono text-xs bg-[var(--color-background)] p-1 rounded">lodash</code> - Utility library</li>
+                  <li><code className="font-mono text-xs bg-[var(--color-background)] p-1 rounded">zod</code> - Data validation</li>
+                  <li><code className="font-mono text-xs bg-[var(--color-background)] p-1 rounded">cheerio</code> - Web scraping</li>
+                  <li><code className="font-mono text-xs bg-[var(--color-background)] p-1 rounded">async</code> - Async control flow</li>
+                  <li><code className="font-mono text-xs bg-[var(--color-background)] p-1 rounded">jsonwebtoken</code> - JWT auth</li>
+                  <li><code className="font-mono text-xs bg-[var(--color-background)] p-1 rounded">dayjs</code> - Date/time manipulation</li>
+                  <li><code className="font-mono text-xs bg-[var(--color-background)] p-1 rounded">picomatch</code> - Pattern matching</li>
+                  <li><code className="font-mono text-xs bg-[var(--color-background)] p-1 rounded">qs</code> - Query string parsing</li>
+                </ul>
+              </div>
+              <div>
+                <label htmlFor="prepCode" className="block text-sm font-medium text-[var(--color-textSecondary)] mb-1">
+                  Prep/PrepAsync Code
+                </label>
+                <Editor
+                  height="150px"
+                  language="javascript"
+                  theme={isDarkMode ? 'vs-dark' : 'light'}
+                  value={nodeData.prepCode || ''}
+                  onChange={(value) => setNodeData(prev => ({ ...prev, prepCode: value }))}
+                  options={{ minimap: { enabled: false } }}
+                />
+              </div>
+              <div>
+                <label htmlFor="execCode" className="block text-sm font-medium text-[var(--color-textSecondary)] mb-1">
+                  Exec/ExecAsync Code
+                </label>
+                <Editor
+                  height="250px"
+                  language="javascript"
+                  theme={isDarkMode ? 'vs-dark' : 'light'}
+                  value={nodeData.execCode || ''}
+                  onChange={(value) => setNodeData(prev => ({ ...prev, execCode: value }))}
+                  options={{ minimap: { enabled: false } }}
+                />
+              </div>
+              <div>
+                <label htmlFor="postCode" className="block text-sm font-medium text-[var(--color-textSecondary)] mb-1">
+                  Post/PostAsync Code
+                </label>
+                <Editor
+                  height="150px"
+                  language="javascript"
+                  theme={isDarkMode ? 'vs-dark' : 'light'}
+                  value={nodeData.postCode || ''}
+                  onChange={(value) => setNodeData(prev => ({ ...prev, postCode: value }))}
+                  options={{ minimap: { enabled: false } }}
+                />
+              </div>
+            </div>
+          )}
 
-        {/* Execution Result Display */}
-        {executionResult && (
+          {/* Execution Result Display */}
+            {executionResult && (
+              <div className="mt-6 pt-4 border-t border-[var(--color-border)]">
+                <h3 className="text-lg font-bold mb-2 text-[var(--color-text)]">Execution Result:</h3>
+                <pre className={`p-3 rounded-md text-sm overflow-x-auto ${executionResult.success ? 'bg-[var(--color-success)]/10 text-[var(--color-success)]' : 'bg-[var(--color-error)]/10 text-[var(--color-error)]'}`}>
+                  <code>{JSON.stringify(executionResult.result || executionResult.error, null, 2)}</code>
+                </pre>
+              </div>
+            )}
+          {/* </div> */}
+
+          {/* Output to Shared Configuration */}
           <div className="mt-6 pt-4 border-t border-[var(--color-border)]">
-            <h3 className="text-lg font-bold mb-2 text-[var(--color-text)]">Execution Result:</h3>
-            <pre className={`p-3 rounded-md text-sm overflow-x-auto ${executionResult.success ? 'bg-[var(--color-success)]/10 text-[var(--color-success)]' : 'bg-[var(--color-error)]/10 text-[var(--color-error)]'}`}>
-              <code>{JSON.stringify(executionResult.result || executionResult.error, null, 2)}</code>
-            </pre>
+            <h3 className="text-lg font-bold mb-2 text-[var(--color-text)]">Output to Shared State</h3>
+            <p className="text-sm text-[var(--color-textSecondary)] mb-3">Specify a key to store this node's output in the shared state.</p>
+            <input
+              type="text"
+              id="outputToSharedKey"
+              name="outputToSharedKey"
+              value={nodeData.outputToSharedKey || ''}
+              onChange={handleChange}
+              placeholder="e.g., my_node_output"
+              className="w-full p-2.5 border border-[var(--color-border)] rounded-md bg-[var(--color-background)] text-[var(--color-text)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent transition-all duration-200"
+            />
           </div>
-        )}
-
-        {/* Output to Shared Configuration */}
-        <div className="mt-6 pt-4 border-t border-[var(--color-border)]">
-          <h3 className="text-lg font-bold mb-2 text-[var(--color-text)]">Output to Shared State</h3>
-          <p className="text-sm text-[var(--color-textSecondary)] mb-3">Specify a key to store this node's output in the shared state.</p>
-          <input
-            type="text"
-            id="outputToSharedKey"
-            name="outputToSharedKey"
-            value={nodeData.outputToSharedKey || ''}
-            onChange={handleChange}
-            placeholder="e.g., my_node_output"
-            className="w-full p-2.5 border border-[var(--color-border)] rounded-md bg-[var(--color-background)] text-[var(--color-text)] focus:outline-none focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent transition-all duration-200"
-          />
         </div>
-      </div>
 
-      <ConfirmationDialog
-        isOpen={showConfirmDialog}
-        message="Are you sure you want to delete this node? This action cannot be undone."
-        onConfirm={handleConfirmDelete}
-        onCancel={handleCancelDelete}
-      />
-    </div>
-  );
-};
 
-export default NodeConfigModal;
+
+      <ConfirmationDialog                                                          
+              isOpen={showConfirmDialog}                                                 
+              message="Are you sure you want to delete this node? This action            
+            cannot be undone."                                                                 
+             onConfirm={handleConfirmDelete}                                            
+              onCancel={handleCancelDelete}                                              
+           />   
+      </div> 
+      </div>                                                                                                                                                
+        );                                                                               
+      };                                                                                 
+      export default NodeConfigModal;

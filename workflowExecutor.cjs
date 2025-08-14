@@ -9,6 +9,19 @@ import { CustomAgentNode } from './src/qflowNodes/CustomAgentNode.js';
 import { CustomInteractiveAgent } from './src/qflowNodes/CustomInteractiveAgent.js';
 import { registerWebhook } from './webhookRegistry.js';
 import crypto from 'crypto';
+import vm from 'vm';
+
+const userLibraries = ['lodash', 'zod', 'cheerio', 'async', 'jsonwebtoken', 'dayjs', 'picomatch', 'qs'];
+
+const createSandboxedRequire = (shared) => {
+  const sandboxedRequire = (moduleName) => {
+    if (userLibraries.includes(moduleName)) {
+      return require(moduleName);
+    }
+    throw new Error(`Module '${moduleName}' is not allowed.`);
+  };
+  return sandboxedRequire;
+};
 
 const activeWorkflows = new Map();
 
@@ -210,6 +223,33 @@ export const executeWorkflow = async (nodes, edges, clients, workflowId) => {
 		}
       }
       flowNode.setParams(resolvedNodeData); // This will set flowNode.params = resolvedNodeData
+
+      if ((node.type === 'Node' || node.type === 'AsyncNode') && (node.data.prepCode || node.data.execCode || node.data.postCode)) {
+        const createSandboxedFunction = (code, argNames = []) => {
+          if (!code) return null;
+          const sandbox = { shared: {}, console, require: createSandboxedRequire() };
+          vm.createContext(sandbox);
+          return vm.runInContext(`(
+            async function(${argNames.join(', ')}) {
+              ${code}
+            }
+          )`, sandbox);
+        };
+
+        const prepFunction = createSandboxedFunction(node.data.prepCode, ['shared']);
+        const execFunction = createSandboxedFunction(node.data.execCode, ['shared', 'prepRes']);
+        const postFunction = createSandboxedFunction(node.data.postCode, ['shared', 'prepRes', 'execRes']);
+
+        if (node.type === 'Node') {
+          if (prepFunction) flowNode.prep = (shared) => prepFunction(shared);
+          if (execFunction) flowNode.exec = (shared, prepRes) => execFunction(shared, prepRes);
+          if (postFunction) flowNode.post = (shared, prepRes, execRes) => postFunction(shared, prepRes, execRes);
+        } else { // AsyncNode
+          if (prepFunction) flowNode.prepAsync = async (shared) => await prepFunction(shared);
+          if (execFunction) flowNode.execAsync = async (shared, prepRes) => await execFunction(shared, prepRes);
+          if (postFunction) flowNode.postAsync = async (shared, prepRes, execRes) => await postFunction(shared, prepRes, execRes);
+        }
+      }
 
       // --- START OF BRANCHNODE SPECIFIC ASSIGNMENT ---
       if (node.type === 'BranchNode') {
@@ -581,6 +621,33 @@ export const executeSingleNode = async (nodeData) => {
 		  }
     }
     flowNode.setParams(resolvedNodeData);
+
+    if ((nodeData.type === 'Node' || nodeData.type === 'AsyncNode') && (nodeData.data.prepCode || nodeData.data.execCode || nodeData.data.postCode)) {
+      const createSandboxedFunction = (code, argNames = []) => {
+        if (!code) return null;
+        const sandbox = { shared: {}, console, require: createSandboxedRequire() };
+        vm.createContext(sandbox);
+        return vm.runInContext(`(
+          async function(${argNames.join(', ')}) {
+            ${code}
+          }
+        )`, sandbox);
+      };
+
+      const prepFunction = createSandboxedFunction(nodeData.data.prepCode, ['shared']);
+      const execFunction = createSandboxedFunction(nodeData.data.execCode, ['shared', 'prepRes']);
+      const postFunction = createSandboxedFunction(nodeData.data.postCode, ['shared', 'prepRes', 'execRes']);
+
+      if (nodeData.type === 'Node') {
+        if (prepFunction) flowNode.prep = (shared) => prepFunction(shared);
+        if (execFunction) flowNode.exec = (shared, prepRes) => execFunction(shared, prepRes);
+        if (postFunction) flowNode.post = (shared, prepRes, execRes) => postFunction(shared, prepRes, execRes);
+      } else { // AsyncNode
+        if (prepFunction) flowNode.prepAsync = async (shared) => await prepFunction(shared);
+        if (execFunction) flowNode.execAsync = async (shared, prepRes) => await execFunction(shared, prepRes);
+        if (postFunction) flowNode.postAsync = async (shared, prepRes, execRes) => await postFunction(shared, prepRes, execRes);
+      }
+    }
 
     // Store original prepAsync and prep methods
     const originalPrepAsync = flowNode.prepAsync;
