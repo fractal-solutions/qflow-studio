@@ -799,6 +799,7 @@ const NodeConfigModal = ({ node, onConfigChange, onClose, onDeleteNode, activeWe
             <div className="space-y-4">
               <div className="p-4 bg-[var(--color-surface-hover)] rounded-lg">
                 <h4 className="font-bold mb-2 text-[var(--color-text)]">Available Libraries</h4>
+                <p className="text-sm text-[var(--color-textSecondary)] mb-2">Use <code className="font-mono text-xs bg-[var(--color-background)] p-1 rounded">require('library_name')</code> to import:</p>
                 <ul className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm text-[var(--color-textSecondary)]">
                   <li><code className="font-mono text-xs bg-[var(--color-background)] p-1 rounded">lodash</code> - Utility library</li>
                   <li><code className="font-mono text-xs bg-[var(--color-background)] p-1 rounded">zod</code> - Data validation</li>

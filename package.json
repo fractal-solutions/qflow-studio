@@ -12,7 +12,7 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "postinstall": "patch-package"
+    "postinstall": "patch-package && cd user_libraries && (command -v bun >/dev/null 2>&1 && bun install || npm install)"
   },
   "dependencies": {
     "@fractal-solutions/qflow": "^1.0.41",
