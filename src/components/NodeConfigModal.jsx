@@ -134,6 +134,13 @@ const NodeConfigModal = ({ node, onConfigChange, onClose, onDeleteNode, activeWe
                 if (config.type === 'select' && (displayNodeData[key] === undefined || displayNodeData[key] === null)) {
                     displayNodeData[key] = ''; // Ensure select fields have a default empty string value
                 }
+                // For textarea fields that are static and not special LLM/Agent prompts, initialize rawJsonInputs
+                if (config.type === 'textarea' &&
+                    node.type !== 'CustomLLMNode' && key !== 'prompt' && // Exclude CustomLLMNode prompt
+                    !(node.type === 'CustomAgentNode' && ['systemPrompt', 'goal'].includes(key)) && // Exclude CustomAgentNode prompts
+                    displayNodeData[key]?.type === 'static') {
+                    initialRawJsonInputs[key] = displayNodeData[key]?.value || '';
+                }
                 // For JSON fields, initialize rawJsonInputs with stringified value
                 if (config.type === 'json') {
                     let jsonValueToDisplay = displayNodeData[key]?.value;
@@ -625,7 +632,11 @@ const NodeConfigModal = ({ node, onConfigChange, onClose, onDeleteNode, activeWe
                           name={`${key}_staticValue`}
                           value={rawJsonInputs[key] || ''} // Use rawJsonInputs for display
                           onChange={(e) => {
-                            setRawJsonInputs(prev => ({ ...prev, [key]: e.target.value })); // Update raw input
+                            setNodeData(prevData => ({
+                              ...prevData,
+                              [key]: { ...prevData[key], value: e.target.value }
+                            }));
+                            setRawJsonInputs(prev => ({ ...prev, [key]: e.target.value })); // Keep rawJsonInputs updated for consistency
                             setJsonErrors(prevErrors => ({ ...prevErrors, [key]: false })); // Clear error on typing
                           }}
                           rows={config.rows || 3}
@@ -766,7 +777,11 @@ const NodeConfigModal = ({ node, onConfigChange, onClose, onDeleteNode, activeWe
                           name={`${key}_staticValue`}
                           value={rawJsonInputs[key] || ''} // Use rawJsonInputs for display
                           onChange={(e) => {
-                            setRawJsonInputs(prev => ({ ...prev, [key]: e.target.value })); // Update raw input
+                            setNodeData(prevData => ({
+                              ...prevData,
+                              [key]: { ...prevData[key], value: e.target.value }
+                            }));
+                            setRawJsonInputs(prev => ({ ...prev, [key]: e.target.value })); // Keep rawJsonInputs updated for consistency
                             setJsonErrors(prevErrors => ({ ...prevErrors, [key]: false })); // Clear error on typing
                           }}
                           rows={config.rows || 6}
