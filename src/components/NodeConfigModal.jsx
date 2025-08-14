@@ -441,7 +441,7 @@ const NodeConfigModal = ({ node, onConfigChange, onClose, onDeleteNode, activeWe
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[999] backdrop-blur-sm">
-      <div className="bg-[var(--color-surface)] p-8 rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] text-[var(--color-text)] border border-[var(--color-border)] transform transition-all duration-300 scale-100 opacity-100 flex flex-col">
+      <div className="bg-[var(--color-surface)] p-8 rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] text-[var(--color-text)] border border-[var(--color-border)] transform transition-all duration-300 scale-100 opacity-100 flex flex-col">
         {/* Modal Header */}
         <div className="flex items-start justify-between mb-2 pb-2 border-b border-[var(--color-border)] sticky top-0 z-10 bg-[var(--color-surface)]">
           <div className="flex flex-col space-y-[-2]">
@@ -812,12 +812,13 @@ const NodeConfigModal = ({ node, onConfigChange, onClose, onDeleteNode, activeWe
                   <li><code className="font-mono text-xs bg-[var(--color-background)] p-1 rounded">qs</code> - Query string parsing</li>
                 </ul>
               </div>
-              <div>
+              <div className="mx-auto pl-16">
                 <label htmlFor="prepCode" className="block text-sm font-medium text-[var(--color-textSecondary)] mb-1">
                   Prep/PrepAsync Code
                 </label>
                 <Editor
                   height="150px"
+                  width="90%"
                   language="javascript"
                   theme={isDarkMode ? 'vs-dark' : 'light'}
                   value={nodeData.prepCode || ''}
@@ -826,12 +827,13 @@ const NodeConfigModal = ({ node, onConfigChange, onClose, onDeleteNode, activeWe
                   className="rounded-md"
                 />
               </div>
-              <div>
+              <div className="mx-auto pl-16">
                 <label htmlFor="execCode" className="block text-sm font-medium text-[var(--color-textSecondary)] mb-1">
                   Exec/ExecAsync Code
                 </label>
                 <Editor
                   height="250px"
+                  width="90%"
                   language="javascript"
                   theme={isDarkMode ? 'vs-dark' : 'light'}
                   value={nodeData.execCode || ''}
@@ -840,12 +842,13 @@ const NodeConfigModal = ({ node, onConfigChange, onClose, onDeleteNode, activeWe
                   className="rounded-md"
                 />
               </div>
-              <div>
+              <div className="mx-auto pl-16">
                 <label htmlFor="postCode" className="block text-sm font-medium text-[var(--color-textSecondary)] mb-1">
                   Post/PostAsync Code
                 </label>
                 <Editor
                   height="150px"
+                  width="90%"
                   language="javascript"
                   theme={isDarkMode ? 'vs-dark' : 'light'}
                   value={nodeData.postCode || ''}
