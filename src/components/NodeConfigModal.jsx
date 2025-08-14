@@ -441,9 +441,9 @@ const NodeConfigModal = ({ node, onConfigChange, onClose, onDeleteNode, activeWe
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[999] backdrop-blur-sm">
-      <div className="bg-[var(--color-surface)] p-8 rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto text-[var(--color-text)] border border-[var(--color-border)] transform transition-all duration-300 scale-100 opacity-100">
+      <div className="bg-[var(--color-surface)] p-8 rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] text-[var(--color-text)] border border-[var(--color-border)] transform transition-all duration-300 scale-100 opacity-100 flex flex-col">
         {/* Modal Header */}
-        <div className="flex items-start justify-between mb-6 pb-4 border-b border-[var(--color-border)]">
+        <div className="flex items-start justify-between mb-2 pb-2 border-b border-[var(--color-border)] sticky top-0 z-10 bg-[var(--color-surface)]">
           <div className="flex flex-col space-y-[-2]">
             <div className="flex items-left flex-col">
               <button
@@ -497,7 +497,8 @@ const NodeConfigModal = ({ node, onConfigChange, onClose, onDeleteNode, activeWe
         </div>
 
         {/* Modal Body - Dynamic Inputs */}
-        <div className="space-y-5 mb-6">
+        <div className="flex-grow overflow-y-auto pr-4 -mr-4">
+          <div className="space-y-5 mb-6">
           {schema && Object.entries(schema).map(([key, config]) => (
             <div key={key}>
               <label htmlFor={key} className="block text-sm font-medium text-[var(--color-textSecondary)] mb-1">
@@ -822,6 +823,7 @@ const NodeConfigModal = ({ node, onConfigChange, onClose, onDeleteNode, activeWe
                   value={nodeData.prepCode || ''}
                   onChange={(value) => setNodeData(prev => ({ ...prev, prepCode: value }))}
                   options={{ minimap: { enabled: false } }}
+                  className="rounded-md"
                 />
               </div>
               <div>
@@ -835,6 +837,7 @@ const NodeConfigModal = ({ node, onConfigChange, onClose, onDeleteNode, activeWe
                   value={nodeData.execCode || ''}
                   onChange={(value) => setNodeData(prev => ({ ...prev, execCode: value }))}
                   options={{ minimap: { enabled: false } }}
+                  className="rounded-md"
                 />
               </div>
               <div>
@@ -848,6 +851,7 @@ const NodeConfigModal = ({ node, onConfigChange, onClose, onDeleteNode, activeWe
                   value={nodeData.postCode || ''}
                   onChange={(value) => setNodeData(prev => ({ ...prev, postCode: value }))}
                   options={{ minimap: { enabled: false } }}
+                  className="rounded-md"
                 />
               </div>
             </div>
@@ -882,15 +886,17 @@ const NodeConfigModal = ({ node, onConfigChange, onClose, onDeleteNode, activeWe
 
 
 
-      <ConfirmationDialog                                                          
+      </div>
+        </div>
+
+        <ConfirmationDialog                                                          
               isOpen={showConfirmDialog}                                                 
               message="Are you sure you want to delete this node? This action            
             cannot be undone."                                                                 
              onConfirm={handleConfirmDelete}                                            
               onCancel={handleCancelDelete}                                              
            />   
-      </div> 
-      </div>                                                                                                                                                
+      </div>                                                                                                                                               
         );                                                                               
       };                                                                                 
       export default NodeConfigModal;
